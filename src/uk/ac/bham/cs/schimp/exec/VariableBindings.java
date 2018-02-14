@@ -6,15 +6,22 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.stream.Collectors;
 
-public class VariableBindings {
+import org.apache.commons.lang3.StringUtils;
+
+import uk.ac.bham.cs.schimp.lang.expression.arith.ArithmeticConstant;
+
+public class VariableBindings implements Cloneable {
 	
 	private List<VariableScopeFrame> scopeFrames = new LinkedList<VariableScopeFrame>();
 	private List<VariableScopeFrame> currentScope;
-	private int nextStateIndex;
 	
-	public VariableBindings(int startStateIndex) {
-		nextStateIndex = startStateIndex;
+	public VariableBindings() {
 		createGlobalScopeFrame();
+	}
+	
+	private VariableBindings(List<VariableScopeFrame> scopeFrames, List<VariableScopeFrame> currentScope) {
+		this.scopeFrames = scopeFrames;
+		this.currentScope = currentScope;
 	}
 	
 	private void createGlobalScopeFrame() {
@@ -24,16 +31,18 @@ public class VariableBindings {
 		currentScope = new LinkedList<>(Arrays.asList(frame));
 	}
 	
+	/*
 	// TODO: nothing else can be called after this method has been called for the first time
-	public int[] destroyGlobalScopeFrame() {
+	public void destroyGlobalScopeFrame() {
 		// remove the global scope frame, as well as any remaining function or block scope frames (this should never
 		// happen while executing a schimp program: if it does, there's a bug in some code that uses this class)
 		// TODO: actually handle this possibility by throwing an exception
 		while (scopeFrames.get(0).getType() == VariableScopeFrame.Type.BLOCK) {
 			scopeFrames.remove(0);
 		}
-		return scopeFrames.remove(0).getStateIndices(); // VariableScopeFrame.Type.GLOBAL
+		scopeFrames.remove(0); // VariableScopeFrame.Type.GLOBAL
 	}
+	*/
 	
 	public void createFunctionScopeFrame() {
 		VariableScopeFrame frame = new VariableScopeFrame(VariableScopeFrame.Type.FUNCTION);
@@ -43,7 +52,7 @@ public class VariableBindings {
 		currentScope = new LinkedList<>(Arrays.asList(frame, scopeFrames.get(scopeFrames.size() - 1)));
 	}
 	
-	public int[] destroyFunctionScopeFrame() {
+	public void destroyFunctionScopeFrame() {
 		// remove the current function scope frame, as well as any block scope frames that belong to that function (this
 		// should never happen while executing a schimp program: if it does, there's a bug in some code that uses this
 		// class)
@@ -51,7 +60,7 @@ public class VariableBindings {
 		while (scopeFrames.get(0).getType() == VariableScopeFrame.Type.BLOCK) {
 			scopeFrames.remove(0);
 		}
-		VariableScopeFrame destroyedScopeFrame = scopeFrames.remove(0); // VariableScopeFrame.Type.FUNCTION
+		scopeFrames.remove(0); // VariableScopeFrame.Type.FUNCTION
 		
 		// destroying the current function scope frame changes the current scope to that of the previously-called
 		// function
@@ -62,8 +71,6 @@ public class VariableBindings {
 		}
 		if (scopeFrames.get(i).getType() == VariableScopeFrame.Type.FUNCTION) currentScope.add(scopeFrames.get(i)); // VariableScopeFrame.Type.FUNCTION
 		currentScope.add(scopeFrames.get(scopeFrames.size() - 1)); // VariableScopeFrame.Type.GLOBAL
-		
-		return destroyedScopeFrame.getStateIndices();
 	}
 	
 	public void createBlockScopeFrame() {
@@ -72,9 +79,9 @@ public class VariableBindings {
 		currentScope.add(0, frame);
 	}
 	
-	public int[] destroyBlockScopeFrame() {
+	public void destroyBlockScopeFrame() {
 		scopeFrames.remove(0);
-		return currentScope.remove(0).getStateIndices();
+		currentScope.remove(0);
 	}
 	
 	public boolean isDefined(String variableName) {
@@ -84,28 +91,10 @@ public class VariableBindings {
 			.isPresent();
 	}
 	
-	public int define(String variableName) throws ProgramExecutionException {
-		currentScope.get(0).define(variableName, nextStateIndex);
-		return nextStateIndex++;
+	public void define(String variableName, ArithmeticConstant value) throws ProgramExecutionException {
+		currentScope.get(0).define(variableName, value);
 	}
 	
-	public int getTotalStateIndices() {
-		return nextStateIndex - 1;
-	}
-	
-	public int getStateIndex(String variableName) throws ProgramExecutionException {
-		try {
-			return currentScope.stream()
-				.filter(f -> f.isDefined(variableName))
-				.findFirst()
-				.get() // scope frame
-				.getStateIndex(variableName); // variable mapping within scope frame (String)
-		} catch (NoSuchElementException e) {
-			throw new ProgramExecutionException("cannot refer to variable '" + variableName + "': variable is undefined here");
-		}
-	}
-	
-	/*
 	public void assign(String variableName, ArithmeticConstant value) throws ProgramExecutionException {
 		try {
 			currentScope.stream()
@@ -117,9 +106,7 @@ public class VariableBindings {
 			throw new ProgramExecutionException("cannot assign value to variable '" + variableName + "': variable is undefined here");
 		}
 	}
-	*/
 	
-	/*
 	public ArithmeticConstant evaluate(String variableName) throws ProgramExecutionException {
 		try {
 			return currentScope.stream()
@@ -131,13 +118,89 @@ public class VariableBindings {
 			throw new ProgramExecutionException("cannot evaluate variable '" + variableName + "': variable is undefined here");
 		}
 	}
-	*/
 	
-	public String toString() {
-		return
-			"VariableBindings: [\n" +
-			currentScope.stream().map(s -> s.toString()).collect(Collectors.joining("\n")) +
-			"\n]";
+	@Override
+	public VariableBindings clone() {
+		List<VariableScopeFrame> clonedScopeFrames = new LinkedList<VariableScopeFrame>();
+		List<VariableScopeFrame> clonedCurrentScope = new LinkedList<VariableScopeFrame>();
+		
+		int c = 0;
+		for (int s = 0; s < scopeFrames.size(); s++) {
+			clonedScopeFrames.add(scopeFrames.get(s));
+			
+			if ((c < currentScope.size()) && (scopeFrames.get(s) == currentScope.get(c))) {
+				clonedCurrentScope.add(clonedScopeFrames.get(s));
+				c++;
+			}
+		}
+		
+		return new VariableBindings(clonedScopeFrames, clonedCurrentScope);
 	}
+	
+	private String indentation(int indent) {
+		return StringUtils.repeat("  ", indent);
+	}
+	
+	@Override
+	public String toString() {
+		return this.toString(0);
+	}
+	
+	public String toString(int indent) {
+		StringBuilder s = new StringBuilder();
+		
+		s.append(indentation(indent));
+		s.append("VariableBindings: [\n");
+		
+		s.append(indentation(indent + 1));
+		s.append("scopeFrames: [\n");
+		s.append(scopeFrames.stream().map(sf -> sf.toString(indent + 2)).collect(Collectors.joining("\n")));
+		s.append("\n");
+		s.append(indentation(indent + 1));
+		s.append("]\n");
+		
+		s.append(indentation(indent + 1));
+		s.append("currentScope: [\n");
+		s.append(currentScope.stream().map(sf -> sf.toString(indent + 2)).collect(Collectors.joining("\n")));
+		s.append("\n");
+		s.append(indentation(indent + 1));
+		s.append("]\n");
+		
+		s.append(indentation(indent));
+		s.append("]");
+		
+		return s.toString();
+	}
+	
+	/*
+	public static void main(String[] args) throws ProgramExecutionException {
+		VariableBindings b = new VariableBindings();
+		b.define("g1", new ArithmeticConstant(1));
+		b.define("g2", new ArithmeticConstant(2));
+		b.createFunctionScopeFrame();
+		b.define("f1_1", new ArithmeticConstant(11));
+		b.define("f1_2", new ArithmeticConstant(12));
+		b.createBlockScopeFrame();
+		b.define("f1_block1_1", new ArithmeticConstant(111));
+		b.define("f1_block1_2", new ArithmeticConstant(112));
+		b.createBlockScopeFrame();
+		b.define("f1_block2_1", new ArithmeticConstant(121));
+		b.define("f1_block2_2", new ArithmeticConstant(122));
+		b.createFunctionScopeFrame();
+		b.define("f2_1", new ArithmeticConstant(11));
+		b.define("f2_2", new ArithmeticConstant(12));
+		b.createBlockScopeFrame();
+		b.define("f2_block1_1", new ArithmeticConstant(211));
+		b.define("f2_block1_2", new ArithmeticConstant(212));
+		b.createBlockScopeFrame();
+		b.define("f2_block2_1", new ArithmeticConstant(221));
+		b.define("f2_block2_2", new ArithmeticConstant(222));
+		
+		System.out.println(b.toString());
+		
+		VariableBindings bClone = b.clone();
+		System.out.println(bClone.toString());
+	}
+	*/
 
 }

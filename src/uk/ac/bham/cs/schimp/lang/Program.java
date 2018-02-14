@@ -76,20 +76,29 @@ public class Program extends Block {
 		}
 		
 		checkCommandList(context);
-		
-		scopedStateIndices = context.variableBindings.destroyGlobalScopeFrame();
 	}
 	
+	@Override
 	public void resolveControlFlow(ControlFlowContext context) {
 		context.program = this;
 		
 		// resolve the control flow of FunctionCommands first, in time for the initial InvokeCommand at the end of the
 		// Program
-		
+		functionCommands.stream().forEach(f -> f.resolveControlFlow(context));
 		
 		// the control flow of a Program is the execution of the InitialCommands followed by the execution of the
-		// initial InvokeCommand, so treat the Program as a CommandList containing the InitialCommands and
-		// InvokeCommand 
+		// initial InvokeCommand, so treat the Program as a CommandList containing the InitialCommands and InvokeCommand
+		for (int i = 0; i < initialCommands.size(); i++) {
+			if (i == initialCommands.size() - 1) {
+				context.nextCommand = initialInvokeCommand;
+			} else {
+				context.nextCommand = initialCommands.get(i + 1);
+			}
+			
+			initialCommands.get(i).resolveControlFlow(context);
+		}
+		context.nextCommand = null;
+		initialInvokeCommand.resolveControlFlow(context);
 	}
 	
 }

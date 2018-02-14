@@ -37,6 +37,10 @@ public class FunctionReference extends Syntax {
 		// after the FunctionReference has been resolved to a Function, check that it can legally be invoked here
 		//function.check(context);
 	}
+	
+	public Function getFunction() {
+		return function;
+	}
 
 	@Override
 	public String toString(int indent) {

@@ -1,6 +1,7 @@
 package uk.ac.bham.cs.schimp.lang.expression.arith;
 
-import parser.State;
+import uk.ac.bham.cs.schimp.exec.EvaluationException;
+import uk.ac.bham.cs.schimp.exec.ProgramExecutionContext;
 import uk.ac.bham.cs.schimp.lang.expression.Expression;
 
 public abstract class ArithmeticExpression extends Expression {
@@ -9,6 +10,6 @@ public abstract class ArithmeticExpression extends Expression {
 		super();
 	}
 	
-	public abstract ArithmeticConstant evaluate(State state);
+	public abstract ArithmeticConstant evaluate(ProgramExecutionContext context) throws EvaluationException;
 	
 }

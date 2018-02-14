@@ -1,12 +1,15 @@
 package uk.ac.bham.cs.schimp.lang;
 
-import java.util.Arrays;
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.List;
 import java.util.stream.Collectors;
 
 import uk.ac.bham.cs.schimp.exec.ProgramExecutionException;
 import uk.ac.bham.cs.schimp.lang.command.Command;
+import uk.ac.bham.cs.schimp.lang.expression.arith.ArithmeticConstant;
 import uk.ac.bham.cs.schimp.lang.expression.arith.VariableReference;
+import uk.ac.bham.cs.schimp.source.ControlFlowContext;
 import uk.ac.bham.cs.schimp.source.SyntaxCheckContext;
 import uk.ac.bham.cs.schimp.source.SyntaxException;
 
@@ -25,6 +28,10 @@ public class Function extends Block {
 		return name;
 	}
 	
+	public List<VariableReference> getParameters() {
+		return parameters;
+	}
+	
 	@Override
 	public void check(SyntaxCheckContext context) throws SyntaxException {
 		// a Function is a special type of Block that creates a new function-level scope frame before its commands are
@@ -34,7 +41,7 @@ public class Function extends Block {
 		context.variableBindings.createFunctionScopeFrame();
 		for (VariableReference v : parameters) {
 			try {
-				context.variableBindings.define(v.getName());
+				context.variableBindings.define(v.getName(), new ArithmeticConstant(0));
 				v.check(context);
 			} catch (ProgramExecutionException e) {
 				throw new SyntaxException("parameter name '" + v.getName() + "' is already used in this function definition");
@@ -43,10 +50,22 @@ public class Function extends Block {
 		
 		checkCommandList(context);
 		
-		// we also need to keep a reference of which indices in the prism State object representing this program's
-		// current execution state were created in this Function's scope, so their values can be erased after this
-		// Function has finished executing (mimicking the variables going out of scope)
-		scopedStateIndices = context.variableBindings.destroyFunctionScopeFrame();
+		context.variableBindings.destroyFunctionScopeFrame();
+	}
+	
+	@Override
+	public void resolveControlFlow(ControlFlowContext context) {
+		// when a Function begins executing, the only Blocks that should be destroyed after Commands have executed are
+		// ones created within the scope of that function
+		Deque<Boolean> parentBlockStack = context.blockStack;
+		context.blockStack = new ArrayDeque<>();
+		
+		for (int i = 0; i < commands.size(); i++) {
+			context.nextCommand = (i == commands.size() - 1 ? null : commands.get(i + 1));
+			commands.get(i).resolveControlFlow(context);
+		}
+		
+		context.blockStack = parentBlockStack;
 	}
 	
 	public String toString(int indent) {
@@ -58,8 +77,7 @@ public class Function extends Block {
 		s.append("(");
 		s.append(parameters.stream().map(parameter -> parameter.toString()).collect(Collectors.joining(", ")));
 		s.append(") {\n");
-		s.append(indentation(indent) + "<scope:" + Arrays.stream(scopedStateIndices).mapToObj(i -> Integer.toString(i)).collect(Collectors.joining(",")) + ">\n");
-		s.append(commands.stream().map(cmd -> cmd.toString(indent + 1)).collect(Collectors.joining("\n")));
+		s.append(commands.stream().map(cmd -> cmd.toString(indent + 1)).collect(Collectors.joining(";\n")));
 		s.append("\n");
 		s.append(indentation(indent));
 		s.append("}");
@@ -76,7 +94,7 @@ public class Function extends Block {
 		s.append("(");
 		s.append(parameters.stream().map(parameter -> parameter.toSourceString()).collect(Collectors.joining(", ")));
 		s.append(") {\n");
-		s.append(commands.stream().map(cmd -> cmd.toSourceString(indent + 1)).collect(Collectors.joining("\n")));
+		s.append(commands.stream().map(cmd -> cmd.toSourceString(indent + 1)).collect(Collectors.joining(";\n")));
 		s.append("\n");
 		s.append(indentation(indent));
 		s.append("}");

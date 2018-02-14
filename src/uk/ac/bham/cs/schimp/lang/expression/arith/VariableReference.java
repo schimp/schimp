@@ -1,6 +1,7 @@
 package uk.ac.bham.cs.schimp.lang.expression.arith;
 
-import parser.State;
+import uk.ac.bham.cs.schimp.exec.EvaluationException;
+import uk.ac.bham.cs.schimp.exec.ProgramExecutionContext;
 import uk.ac.bham.cs.schimp.exec.ProgramExecutionException;
 import uk.ac.bham.cs.schimp.source.SyntaxCheckContext;
 import uk.ac.bham.cs.schimp.source.SyntaxException;
@@ -8,7 +9,6 @@ import uk.ac.bham.cs.schimp.source.SyntaxException;
 public class VariableReference extends ArithmeticExpression {
 	
 	private String name;
-	private int stateIndex = Integer.MIN_VALUE;
 	
 	public VariableReference(String name) {
 		super();
@@ -21,22 +21,25 @@ public class VariableReference extends ArithmeticExpression {
 	
 	@Override
 	public void check(SyntaxCheckContext context) throws SyntaxException {
-		// a variable with this name must be in scope here; if one is, record its index in the State array so its
-		// current value can be looked up during execution
-		try {
-			stateIndex = context.variableBindings.getStateIndex(name);
-		} catch (ProgramExecutionException e) {
+		// a variable with this name must be in scope here
+		if (!context.variableBindings.isDefined(name)) {
 			throw new SyntaxException("variable '" + name + "' is undefined here");
 		}
 	}
 	
 	@Override
-	public ArithmeticConstant evaluate(State state) {
-		return new ArithmeticConstant((int)state.varValues[stateIndex]);
+	public ArithmeticConstant evaluate(ProgramExecutionContext context) throws EvaluationException {
+		try {
+			return context.variableBindings.evaluate(name);
+		} catch (ProgramExecutionException e) {
+			// this should never happen: if the syntax-checking phase succeeds, it guarantees that variables are always
+			// in scope
+			throw new EvaluationException("variable '" + name + "' cannot be evaluated here");
+		}
 	}
 	
 	public String toString(int indent) {
-		return indentation(indent) + name + "<" + stateIndex + ">";
+		return indentation(indent) + name;
 	}
 	
 	public String toSourceString(int indent) {

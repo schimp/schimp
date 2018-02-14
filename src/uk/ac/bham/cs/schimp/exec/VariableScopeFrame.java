@@ -1,11 +1,14 @@
 package uk.ac.bham.cs.schimp.exec;
 
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public class VariableScopeFrame {
+import org.apache.commons.lang3.StringUtils;
+
+import uk.ac.bham.cs.schimp.lang.expression.arith.ArithmeticConstant;
+
+public class VariableScopeFrame implements Cloneable {
 	
 	public enum Type {
 		GLOBAL,
@@ -14,10 +17,15 @@ public class VariableScopeFrame {
 	}
 	
 	private Type type;
-	private Map<String, Integer> scopeFrame = new HashMap<String, Integer>();
+	private Map<String, ArithmeticConstant> scopeFrame = new HashMap<String, ArithmeticConstant>();
 	
 	public VariableScopeFrame(Type type) {
 		this.type = type;
+	}
+	
+	private VariableScopeFrame(Type type, Map<String, ArithmeticConstant> scopeFrame) {
+		this.type = type;
+		this.scopeFrame = scopeFrame;
 	}
 	
 	public Type getType() {
@@ -28,46 +36,26 @@ public class VariableScopeFrame {
 		return scopeFrame.containsKey(variableName);
 	}
 	
-	public void define(String variableName, int stateIndex) throws ProgramExecutionException {
+	public void define(String variableName, ArithmeticConstant value) throws ProgramExecutionException {
 		if (scopeFrame.containsKey(variableName)) {
 			throw new ProgramExecutionException("cannot declare variable '" + variableName + "': variable is already defined in this scope");
 		} else {
-			scopeFrame.put(variableName, stateIndex);
+			scopeFrame.put(variableName, value);
 		}
 	}
 	
-	public int getStateIndex(String variableName) throws ProgramExecutionException {
+	public void assign(String variableName, ArithmeticConstant value) throws ProgramExecutionException {
 		if (scopeFrame.containsKey(variableName)) {
-			return scopeFrame.get(variableName);
-		} else {
-			throw new ProgramExecutionException("cannot get state index of variable '" + variableName + "': variable is undefined here");
-		}
-	}
-	
-	public int[] getStateIndices() {
-		int[] indices = scopeFrame.values().stream()
-			.mapToInt(i -> i)
-			.toArray();
-		
-		Arrays.sort(indices);
-		return indices;
-	}
-	
-	/*
-	public void assign(String variableName, int stateIndex) throws ProgramExecutionException {
-		if (scopeFrame.containsKey(variableName)) {
-			scopeFrame.put(variableName, stateIndex);
+			scopeFrame.put(variableName, value);
 		} else {
 			throw new ProgramExecutionException("cannot assign value to variable '" + variableName + "': variable is undefined here");
 		}
 	}
-	*/
 	
 	public void clear() {
 		scopeFrame.clear();
 	}
 	
-	/*
 	public ArithmeticConstant evaluate(String variableName) throws ProgramExecutionException {
 		if (scopeFrame.containsKey(variableName)) {
 			return scopeFrame.get(variableName);
@@ -75,16 +63,42 @@ public class VariableScopeFrame {
 			throw new ProgramExecutionException("cannot assign value to variable '" + variableName + "': variable is undefined here");
 		}
 	}
-	*/
 	
+	@Override
+	public VariableScopeFrame clone() {
+		return new VariableScopeFrame(
+			type, // VariableScopeFrame.Type - safe to reuse reference
+			scopeFrame.entrySet().stream()
+				.collect(Collectors.<Map.Entry<String, ArithmeticConstant>, String, ArithmeticConstant>toMap(
+					e -> e.getKey(), // String - safe to reuse reference
+					e -> e.getValue().clone() // ArithmeticConstant - needs to be cloned
+				))
+		);
+	}
+	
+	private String indentation(int indent) {
+		return StringUtils.repeat("  ", indent);
+	}
+	
+	@Override
 	public String toString() {
-		return
-			"  VariableScopeFrame[" + type + "]: {" +
+		return this.toString(0);
+	}
+	
+	public String toString(int indent) {
+		StringBuilder s = new StringBuilder();
+		
+		s.append(indentation(indent));
+		s.append("VariableScopeFrame[" + type + "]: {");
+		s.append(
 			scopeFrame.keySet().stream()
 				.sorted()
-				.map(v -> v + "=" + scopeFrame.get(v))
-				.collect(Collectors.joining(" ")) +
-			"}";
+				.map(v -> v + "=" + scopeFrame.get(v).toSourceString())
+				.collect(Collectors.joining(" "))
+		);
+		s.append("}");
+		
+		return s.toString();
 	}
 
 }

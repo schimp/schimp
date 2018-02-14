@@ -14,6 +14,11 @@ public class ProbabilityMassFunction<T> {
 		pmf = new LinkedHashMap<T, Apfloat>();
 	}
 	
+	public void add(T element, Apfloat probability) {
+		// TODO: don't allow existing elements to be overwritten: this is a syntax error
+		pmf.put(element, probability);
+	}
+	
 	public void add(T element, String probability) {
 		// TODO: don't allow existing elements to be overwritten: this is a syntax error
 		pmf.put(element, new Apfloat(probability, Apfloat.INFINITE));

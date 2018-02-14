@@ -12,7 +12,7 @@ import uk.ac.bham.cs.schimp.lang.Program;
 public class SyntaxCheckContext {
 	
 	public Program program;
-	public VariableBindings variableBindings = new VariableBindings(100);
+	public VariableBindings variableBindings = new VariableBindings();
 	public Map<Pair<String, Integer>, Function> functions = new HashMap<Pair<String, Integer>, Function>();
 
 }

@@ -3,9 +3,10 @@ package uk.ac.bham.cs.schimp.lang.command;
 import java.util.Iterator;
 import java.util.stream.Collectors;
 
-import parser.State;
 import uk.ac.bham.cs.schimp.ProbabilityMassFunction;
-import uk.ac.bham.cs.schimp.exec.SucceedingStates;
+import uk.ac.bham.cs.schimp.exec.EvaluationException;
+import uk.ac.bham.cs.schimp.exec.ProgramExecutionContext;
+import uk.ac.bham.cs.schimp.exec.ProgramExecutionException;
 import uk.ac.bham.cs.schimp.lang.expression.arith.ArithmeticExpression;
 import uk.ac.bham.cs.schimp.lang.expression.arith.VariableReference;
 import uk.ac.bham.cs.schimp.source.SyntaxCheckContext;
@@ -48,13 +49,41 @@ public class AssignCommand extends Command {
 		}
 	}
 	
+	@Override
+	public ProbabilityMassFunction<ProgramExecutionContext> execute(ProgramExecutionContext context) throws ProgramExecutionException {
+		ProbabilityMassFunction<ProgramExecutionContext> succeedingPMF = new ProbabilityMassFunction<>();
+		
+		pmf.elements().stream().forEach(e -> {
+			ProgramExecutionContext succeedingContext = context.clone();
+			
+			try {
+				succeedingContext.variableBindings.assign(v.getName(), e.evaluate(succeedingContext));
+			} catch (EvaluationException ex) {
+				// TODO: wrap this exception properly
+				throw new ProgramExecutionException(ex.getMessage());
+			};
+			
+			succeedingContext.setNextCommand(nextCommand);
+			
+			succeedingPMF.add(succeedingContext, pmf.probabilityOf(e));
+		});
+		
+		succeedingPMF.finalise();
+		
+		return succeedingPMF;
+	}
+	
 	public String toString(int indent) {
 		StringBuilder s = new StringBuilder();
 		
 		s.append(indentation(indent));
 		s.append("[");
 		s.append(id);
-		//if (nextCommand != null) s.append("->" + nextCommand.getID());
+		s.append("->");
+		if (destroyBlockScopeFrames != 0) {
+			s.append("dblock:" + destroyBlockScopeFrames + ",");
+		}
+		s.append(nextCommand == null ? "popfn" : nextCommand.getID());
 		s.append("] ");
 		s.append(v.toString());
 		s.append(" := {\n");

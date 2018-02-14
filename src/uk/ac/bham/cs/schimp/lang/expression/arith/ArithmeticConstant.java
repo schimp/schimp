@@ -1,6 +1,6 @@
 package uk.ac.bham.cs.schimp.lang.expression.arith;
 
-import parser.State;
+import uk.ac.bham.cs.schimp.exec.ProgramExecutionContext;
 import uk.ac.bham.cs.schimp.source.SyntaxCheckContext;
 import uk.ac.bham.cs.schimp.source.SyntaxException;
 
@@ -17,8 +17,12 @@ public class ArithmeticConstant extends ArithmeticExpression {
 	public void check(SyntaxCheckContext context) throws SyntaxException {}
 	
 	@Override
-	public ArithmeticConstant evaluate(State state) {
+	public ArithmeticConstant evaluate(ProgramExecutionContext context) {
 		return this;
+	}
+	
+	public ArithmeticConstant clone() {
+		return new ArithmeticConstant(constant);
 	}
 	
 	public int toInteger() {

@@ -10,10 +10,6 @@ public class CommandTable {
 	private Map<Integer, Command> commands = new HashMap<Integer, Command>();
 	private int lastCommandID = 0;
 	
-	public CommandTable() {
-		
-	}
-	
 	public int addCommand(Command command) {
 		if (commands.containsValue(command)) {
 			return commands.entrySet().stream()

@@ -1,13 +1,15 @@
 package uk.ac.bham.cs.schimp.lang.command;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
 import org.javatuples.Pair;
 
+import uk.ac.bham.cs.schimp.ProbabilityMassFunction;
+import uk.ac.bham.cs.schimp.exec.ProgramExecutionContext;
 import uk.ac.bham.cs.schimp.lang.Function;
 import uk.ac.bham.cs.schimp.lang.expression.arith.VariableReference;
+import uk.ac.bham.cs.schimp.source.ControlFlowContext;
 import uk.ac.bham.cs.schimp.source.SyntaxCheckContext;
 import uk.ac.bham.cs.schimp.source.SyntaxException;
 
@@ -55,6 +57,17 @@ public class FunctionCommand extends Command {
 		function.check(context);
 	}
 	
+	@Override
+	public void resolveControlFlow(ControlFlowContext context) {
+		function.resolveControlFlow(context);
+	}
+	
+	@Override
+	public ProbabilityMassFunction<ProgramExecutionContext> execute(ProgramExecutionContext context) {
+		// this is never used: a FunctionCommand can't be executed directly
+		return null;
+	}
+	
 	public String toString(int indent) {
 		StringBuilder s = new StringBuilder();
 		
@@ -64,7 +77,6 @@ public class FunctionCommand extends Command {
 		s.append("(");
 		s.append(parameters.stream().map(parameter -> parameter.toString()).collect(Collectors.joining(", ")));
 		s.append(") {\n");
-		s.append(indentation(indent + 1) + "<scope:" + Arrays.stream(function.getScopedStateIndices()).mapToObj(i -> Integer.toString(i)).collect(Collectors.joining(",")) + ">\n");
 		s.append(body.stream().map(cmd -> cmd.toString(indent + 1)).collect(Collectors.joining("\n")));
 		s.append("\n");
 		s.append(indentation(indent));
@@ -82,7 +94,6 @@ public class FunctionCommand extends Command {
 		s.append("(");
 		s.append(parameters.stream().map(parameter -> parameter.toSourceString()).collect(Collectors.joining(", ")));
 		s.append(") {\n");
-		s.append(indentation(indent + 1) + "<scope:" + Arrays.stream(function.getScopedStateIndices()).mapToObj(i -> Integer.toString(i)).collect(Collectors.joining(",")) + ">\n");
 		s.append(body.stream().map(cmd -> cmd.toSourceString(indent + 1)).collect(Collectors.joining("\n")));
 		s.append("\n");
 		s.append(indentation(indent));

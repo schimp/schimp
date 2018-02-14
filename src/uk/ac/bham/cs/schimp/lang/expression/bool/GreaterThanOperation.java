@@ -1,6 +1,7 @@
 package uk.ac.bham.cs.schimp.lang.expression.bool;
 
-import parser.State;
+import uk.ac.bham.cs.schimp.exec.EvaluationException;
+import uk.ac.bham.cs.schimp.exec.ProgramExecutionContext;
 import uk.ac.bham.cs.schimp.lang.expression.arith.ArithmeticExpression;
 import uk.ac.bham.cs.schimp.source.SyntaxCheckContext;
 import uk.ac.bham.cs.schimp.source.SyntaxException;
@@ -23,8 +24,8 @@ public class GreaterThanOperation extends BooleanExpression {
 	}
 	
 	@Override
-	public BooleanConstant evaluate(State state) {
-		return new BooleanConstant(left.evaluate(state).toInteger() > right.evaluate(state).toInteger());
+	public BooleanConstant evaluate(ProgramExecutionContext context) throws EvaluationException {
+		return new BooleanConstant(left.evaluate(context).toInteger() > right.evaluate(context).toInteger());
 	}
 	
 	public String toString(int indent) {

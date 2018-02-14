@@ -9,7 +9,7 @@ import uk.ac.bham.cs.schimp.source.ControlFlowContext;
 import uk.ac.bham.cs.schimp.source.SyntaxCheckContext;
 import uk.ac.bham.cs.schimp.source.SyntaxException;
 
-public class CommandList extends Syntax {
+public abstract class CommandList extends Syntax {
 	
 	protected List<Command> commands;
 	
@@ -23,13 +23,14 @@ public class CommandList extends Syntax {
 		this.commands = Arrays.asList(commands);
 	}
 	
+	public Command getFirstCommand() {
+		// TODO: make sure commands isn't empty (it never should be)
+		return commands.get(0);
+	}
+	
 	@Override
 	public void check(SyntaxCheckContext context) throws SyntaxException {
 		checkCommandList(context);
-	}
-	
-	public void resolveControlFlow(ControlFlowContext context) {
-		
 	}
 	
 	protected void checkCommandList(SyntaxCheckContext context) throws SyntaxException {
@@ -41,6 +42,8 @@ public class CommandList extends Syntax {
 			throw e;
 		}
 	}
+	
+	public abstract void resolveControlFlow(ControlFlowContext context);
 	
 	public String toString(int indent) {
 		return commands.stream().map(cmd -> cmd.toString(indent)).collect(Collectors.joining(";\n"));

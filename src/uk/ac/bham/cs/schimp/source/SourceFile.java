@@ -14,6 +14,7 @@ import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.TokenStream;
 
 import uk.ac.bham.cs.schimp.ProbabilityMassFunction;
+import uk.ac.bham.cs.schimp.exec.ProgramExecutionContext;
 import uk.ac.bham.cs.schimp.lang.*;
 import uk.ac.bham.cs.schimp.lang.command.*;
 import uk.ac.bham.cs.schimp.lang.expression.arith.*;
@@ -423,6 +424,7 @@ public class SourceFile {
 		SourceFile source = new SourceFile(new File(args[0]));
 		Program p = source.parse();
 		System.out.println(p.toString());
+		System.out.println(ProgramExecutionContext.initialContext(p));
 	}
 	
 }

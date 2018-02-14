@@ -1,6 +1,7 @@
 package uk.ac.bham.cs.schimp.lang.expression.bool;
 
-import parser.State;
+import uk.ac.bham.cs.schimp.exec.EvaluationException;
+import uk.ac.bham.cs.schimp.exec.ProgramExecutionContext;
 import uk.ac.bham.cs.schimp.lang.expression.Expression;
 
 public abstract class BooleanExpression extends Expression {
@@ -9,6 +10,6 @@ public abstract class BooleanExpression extends Expression {
 		super();
 	}
 	
-	public abstract BooleanConstant evaluate(State state);
+	public abstract BooleanConstant evaluate(ProgramExecutionContext context) throws EvaluationException;
 	
 }

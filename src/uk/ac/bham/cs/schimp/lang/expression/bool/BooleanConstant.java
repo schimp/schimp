@@ -1,6 +1,7 @@
 package uk.ac.bham.cs.schimp.lang.expression.bool;
 
-import parser.State;
+import uk.ac.bham.cs.schimp.exec.EvaluationException;
+import uk.ac.bham.cs.schimp.exec.ProgramExecutionContext;
 import uk.ac.bham.cs.schimp.source.SyntaxCheckContext;
 import uk.ac.bham.cs.schimp.source.SyntaxException;
 
@@ -17,7 +18,7 @@ public class BooleanConstant extends BooleanExpression {
 	public void check(SyntaxCheckContext context) throws SyntaxException {}
 	
 	@Override
-	public BooleanConstant evaluate(State state) {
+	public BooleanConstant evaluate(ProgramExecutionContext context) throws EvaluationException {
 		return this;
 	}
 	

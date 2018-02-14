@@ -1,6 +1,7 @@
 package uk.ac.bham.cs.schimp.lang.expression.arith;
 
-import parser.State;
+import uk.ac.bham.cs.schimp.exec.EvaluationException;
+import uk.ac.bham.cs.schimp.exec.ProgramExecutionContext;
 import uk.ac.bham.cs.schimp.source.SyntaxCheckContext;
 import uk.ac.bham.cs.schimp.source.SyntaxException;
 
@@ -22,8 +23,8 @@ public class MultiplyOperation extends ArithmeticExpression {
 	}
 	
 	@Override
-	public ArithmeticConstant evaluate(State state) {
-		return new ArithmeticConstant(left.evaluate(state).toInteger() * right.evaluate(state).toInteger());
+	public ArithmeticConstant evaluate(ProgramExecutionContext context) throws EvaluationException {
+		return new ArithmeticConstant(left.evaluate(context).toInteger() * right.evaluate(context).toInteger());
 	}
 	
 	public String toString(int indent) {

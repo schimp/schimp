@@ -1,6 +1,7 @@
 package uk.ac.bham.cs.schimp.lang.expression.bool;
 
-import parser.State;
+import uk.ac.bham.cs.schimp.exec.EvaluationException;
+import uk.ac.bham.cs.schimp.exec.ProgramExecutionContext;
 import uk.ac.bham.cs.schimp.source.SyntaxCheckContext;
 import uk.ac.bham.cs.schimp.source.SyntaxException;
 
@@ -22,8 +23,8 @@ public class BooleanOrOperation extends BooleanExpression {
 	}
 	
 	@Override
-	public BooleanConstant evaluate(State state) {
-		return new BooleanConstant(left.evaluate(state).toBoolean() || right.evaluate(state).toBoolean());
+	public BooleanConstant evaluate(ProgramExecutionContext context) throws EvaluationException {
+		return new BooleanConstant(left.evaluate(context).toBoolean() || right.evaluate(context).toBoolean());
 	}
 	
 	public String toString(int indent) {
