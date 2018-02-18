@@ -174,6 +174,7 @@ public class PRISMModelGenerator implements ModelGenerator {
 	
 	@Override
 	public State getInitialState() throws PrismException {
+		System.out.println("getInitialState");
 		// this method is expected to return a fresh copy of the initial state, so create a new ProgramExecutionContext
 		// object to tie to the prism State object
 		lastStateID++;
