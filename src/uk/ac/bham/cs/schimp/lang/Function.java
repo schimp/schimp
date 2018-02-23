@@ -5,20 +5,24 @@ import java.util.Deque;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.javatuples.Pair;
+
+import uk.ac.bham.cs.schimp.ProbabilityMassFunction;
 import uk.ac.bham.cs.schimp.exec.ProgramExecutionException;
 import uk.ac.bham.cs.schimp.lang.command.Command;
 import uk.ac.bham.cs.schimp.lang.expression.arith.ArithmeticConstant;
+import uk.ac.bham.cs.schimp.lang.expression.arith.ArithmeticExpression;
 import uk.ac.bham.cs.schimp.lang.expression.arith.VariableReference;
 import uk.ac.bham.cs.schimp.source.ControlFlowContext;
 import uk.ac.bham.cs.schimp.source.SyntaxCheckContext;
 import uk.ac.bham.cs.schimp.source.SyntaxException;
 
-public class Function extends Block {
+public abstract class Function extends Block {
 	
 	private String name;
 	private List<VariableReference> parameters;
 	
-	public Function(String name, List<VariableReference> parameters, List<Command> body) {
+	protected Function(String name, List<VariableReference> parameters, List<Command> body) {
 		super(body);
 		this.name = name;
 		this.parameters = parameters;
@@ -31,6 +35,8 @@ public class Function extends Block {
 	public List<VariableReference> getParameters() {
 		return parameters;
 	}
+	
+	public abstract ProbabilityMassFunction<Pair<Integer, Integer>> getResourceConsumption(List<ArithmeticConstant> invokeParameters);
 	
 	@Override
 	public void check(SyntaxCheckContext context) throws SyntaxException {

@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.stream.Collectors;
 
+import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import uk.ac.bham.cs.schimp.lang.Program;
@@ -62,6 +63,10 @@ public class ProgramExecutionContext implements Cloneable {
 		clonedContext.outputs = new LinkedList<>(outputs);
 		
 		return clonedContext;
+	}
+	
+	public String toHash() {
+		return DigestUtils.md5Hex(toString());
 	}
 	
 	@Override

@@ -45,7 +45,7 @@ bexp : '(' bexp ')'             # BexpParens
      | BOOLEAN                  # BexpConst
      ;
 
-// proability mass functions
+// probability mass functions
 pmf : '{' aexp '->' NUMBER (',' aexp '->' NUMBER)* '}' ;
 
 // floating-point numbers/integers

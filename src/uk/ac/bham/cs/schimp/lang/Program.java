@@ -68,7 +68,7 @@ public class Program extends Block {
 					throw new SyntaxException("function '" + existingFunction.get().getValue0() + "/" + existingFunction.get().getValue1() + "' is already defined");
 				} else {
 					Pair<String, Integer> signature = new Pair<String, Integer>(c.getName(), c.getArity());
-					Function f = new Function(c.getName(), c.getParameters(), c.getBody());
+					Function f = new AtomicFunction(c.getName(), c.getParameters(), c.getBody());
 					context.functions.put(signature, f);
 					functions.put(signature, f);
 				}
