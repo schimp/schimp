@@ -70,7 +70,9 @@ public class InitialCommand extends Command {
 			ProgramExecutionContext succeedingContext = context.clone();
 			
 			try {
-				succeedingContext.initialVariableBindings.define(v.getName(), e.evaluate(succeedingContext));
+				ArithmeticConstant a = e.evaluate(succeedingContext);
+				succeedingContext.variableBindings.define(v.getName(), a);
+				succeedingContext.initialVariableBindings.define(v.getName(), a);
 			} catch (EvaluationException ex) {
 				// TODO: wrap this exception properly
 				throw new ProgramExecutionException(ex.getMessage());

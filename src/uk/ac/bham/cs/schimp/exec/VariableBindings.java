@@ -126,7 +126,7 @@ public class VariableBindings implements Cloneable {
 		
 		int c = 0;
 		for (int s = 0; s < scopeFrames.size(); s++) {
-			clonedScopeFrames.add(scopeFrames.get(s));
+			clonedScopeFrames.add(scopeFrames.get(s).clone());
 			
 			if ((c < currentScope.size()) && (scopeFrames.get(s) == currentScope.get(c))) {
 				clonedCurrentScope.add(clonedScopeFrames.get(s));
