@@ -210,6 +210,11 @@ public class PRISMModelGenerator implements ModelGenerator {
 				e.printStackTrace(System.err);
 				throw new PrismException(e.getMessage());
 			}
+			
+			// now that this State has been explored and its succeeding states can be mapped, its corresponding
+			// ProgramExecutionContext object isn't needed any more - remove it from schimpExecutionContexts to free up
+			// some memory
+			schimpExecutionContexts.remove(exploringStateID);
 		}
 		
 		// assign a prism State object to each succeeding ProgramExecutionContext; if a particular
@@ -238,7 +243,7 @@ public class PRISMModelGenerator implements ModelGenerator {
 			succeedingStateProbabilities[index] = succeedingContexts.probabilityOf(c).doubleValue();
 			
 			index++;
-		};
+		}
 	}
 
 	@Override
