@@ -189,16 +189,16 @@ public class PRISMModelGenerator implements ModelGenerator {
 		// get the schimp ProgramExecutionContext associated with this prism State via the id in the prism State
 		exploringState = exploreState;
 		int exploringStateID = (int)exploreState.varValues[0];
-		System.out.println("exploreState: " + exploringStateID);
+		//System.out.println("exploreState: " + exploringStateID);
 		ProgramExecutionContext executingContext = schimpExecutionContexts.get(exploringStateID);
-		System.out.println(executingContext.toString());
+		//System.out.println(executingContext.toString());
 		
 		// execute the next command in the ProgramExecutionContext to discover the probability distribution over its
 		// succeeding ProgramExecutionContexts; if the next command is null, the schimp program has terminated in this
 		// ProgramExecutionContext, and its only succeeding ProgramExecutionContext is itself (i.e. a self-loop)
 		ProbabilityMassFunction<ProgramExecutionContext> succeedingContexts;
 		if (executingContext.executingCommand == null) {
-			System.out.println(exploringStateID + ": terminating state");
+			//System.out.println(exploringStateID + ": terminating state");
 			succeedingContexts = new ProbabilityMassFunction<>();
 			succeedingContexts.add(executingContext, "1");
 			succeedingContexts.finalise();
@@ -207,7 +207,7 @@ public class PRISMModelGenerator implements ModelGenerator {
 				succeedingContexts = executingContext.executingCommand.execute(executingContext);
 			} catch (ProgramExecutionException e) {
 				// TODO: wrap this properly
-				System.out.println("ProgramExecutionException: " + e.getMessage());
+				e.printStackTrace(System.err);
 				throw new PrismException(e.getMessage());
 			}
 		}
@@ -219,17 +219,17 @@ public class PRISMModelGenerator implements ModelGenerator {
 		succeedingStateProbabilities = new double[succeedingContexts.elements().size()];
 		int index = 0;
 		for (ProgramExecutionContext c : succeedingContexts.elements()) {
-			System.out.println("succeeding state " + index + ":");
-			System.out.println(c.toString());
+			//System.out.println("succeeding state " + index + ", p=" + succeedingContexts.probabilityOf(c).doubleValue() + ":");
+			//System.out.println(c.toString());
 			String contextHash = c.toHash();
 			
 			int succeedingStateID;
 			if (schimpExecutionContextHashes.containsKey(contextHash)) {
 				succeedingStateID = schimpExecutionContextHashes.get(contextHash);
-				System.out.println("state already seen, id " + succeedingStateID);
+				//System.out.println("state already seen, id " + succeedingStateID);
 			} else {
 				succeedingStateID = ++lastStateID;
-				System.out.println("new state, id " + succeedingStateID);
+				//System.out.println("new state, id " + succeedingStateID);
 				schimpExecutionContexts.put(succeedingStateID, c);
 				schimpExecutionContextHashes.put(contextHash, succeedingStateID);
 			}
@@ -291,7 +291,7 @@ public class PRISMModelGenerator implements ModelGenerator {
 	
 	@Override
 	public int getNumChoices() throws PrismException {
-		return 0;
+		return 1;
 	}
 	
 	@Override
