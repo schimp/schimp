@@ -3,7 +3,9 @@ package uk.ac.bham.cs.schimp;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apfloat.Apfloat;
 
 public class ProbabilityMassFunction<T> {
@@ -34,6 +36,24 @@ public class ProbabilityMassFunction<T> {
 	
 	public Apfloat probabilityOf(T element) {
 		return pmf.getOrDefault(element, new Apfloat(0));
+	}
+	
+	private String indentation(int indent) {
+		return StringUtils.repeat("  ", indent);
+	}
+	
+	@Override
+	public String toString() {
+		return this.toString(0);
+	}
+	
+	public String toString(int indent) {
+		StringBuilder s = new StringBuilder();
+		
+		s.append(indentation(indent));
+		s.append(pmf.keySet().stream().map(e -> e.toString() + " -> " + pmf.get(e).toString(true)).collect(Collectors.joining(", ")));
+		
+		return s.toString();
 	}
 	
 }

@@ -78,6 +78,7 @@ public class InitialCommand extends Command {
 				throw new ProgramExecutionException(ex.getMessage());
 			};
 			
+			if (destroyBlockScopeFrames > 0) succeedingContext.destroyBlockScopeFrames(destroyBlockScopeFrames);
 			succeedingContext.setNextCommand(nextCommand);
 			
 			succeedingPMF.add(succeedingContext, pmf.probabilityOf(e));

@@ -87,6 +87,7 @@ public class IfCommand extends Command {
 			succeedingContext.setNextCommand(trueNextCommand);
 		} else {
 			if (falseNextCommand == null) {
+				if (destroyBlockScopeFrames > 0) context.destroyBlockScopeFrames(destroyBlockScopeFrames);
 				succeedingContext.setNextCommand(nextCommand);
 			} else {
 				succeedingContext.variableBindings.createBlockScopeFrame();
@@ -110,7 +111,14 @@ public class IfCommand extends Command {
 		s.append("->t:");
 		s.append(trueNextCommand.getID());
 		s.append("/f:");
-		s.append(falseNextCommand != null ? falseNextCommand.getID() : nextCommand != null ? nextCommand.getID() : "popfn");
+		s.append(
+			falseNextCommand != null ?
+			falseNextCommand.getID() :
+			(
+				(destroyBlockScopeFrames != 0 ? "dblock:" + destroyBlockScopeFrames + "," : "") +
+				(nextCommand != null ? nextCommand.getID() : "popfn")
+			)
+		);
 		s.append("] if ");
 		s.append(conditional.toString());
 		s.append(" {\n");

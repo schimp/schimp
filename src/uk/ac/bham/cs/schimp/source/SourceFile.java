@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.antlr.v4.runtime.CharStream;
@@ -12,8 +13,10 @@ import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.TokenStream;
+import org.javatuples.Pair;
 
 import uk.ac.bham.cs.schimp.ProbabilityMassFunction;
+import uk.ac.bham.cs.schimp.exec.FunctionModel;
 import uk.ac.bham.cs.schimp.exec.ProgramExecutionContext;
 import uk.ac.bham.cs.schimp.lang.*;
 import uk.ac.bham.cs.schimp.lang.command.*;
@@ -35,7 +38,7 @@ public class SourceFile {
 		return file.toString();
 	}
 	
-	public Program parse() throws IOException, SyntaxException {
+	public Program parse(Map<Pair<String, Integer>, FunctionModel> functionModels) throws IOException, SyntaxException {
 		CharStream charStream = CharStreams.fromPath(file.toPath());
 		SCHIMPLexer lexer = new SCHIMPLexer(charStream);
 		TokenStream tokens = new CommonTokenStream(lexer);
@@ -43,7 +46,11 @@ public class SourceFile {
 		
 		ProgramVisitor programVisitor = new ProgramVisitor();
 		Program program = programVisitor.visit(parser.program());
-		program.check(new SyntaxCheckContext());
+		
+		SyntaxCheckContext context = new SyntaxCheckContext();
+		context.functionModels = functionModels;
+		program.check(context);
+		
 		program.resolveControlFlow(new ControlFlowContext());
 		
 		return program;
@@ -420,11 +427,13 @@ public class SourceFile {
 		}
 	}
 	
+	/*
 	public static void main(String[] args) throws IOException, SyntaxException {
 		SourceFile source = new SourceFile(new File(args[0]));
 		Program p = source.parse();
 		System.out.println(p.toString());
 		System.out.println(ProgramExecutionContext.initialContext(p));
 	}
+	*/
 	
 }

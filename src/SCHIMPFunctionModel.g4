@@ -1,13 +1,20 @@
 grammar SCHIMPFunctionModel;
 
+// list of function models
+functionmodellist : functionmodel (';' functionmodel)* ;
+
 // function model
-functionmodel : IDENTIFIER '/' NUMBER ':=' aconstmap ;
+functionmodel : 'model' IDENTIFIER '/' NUMBER ':=' aconstlistmap ;
 
 // mapping of lists of arithmetic constants to time/power probability mass functions
-aconstmap : '{' aconstlist '->' (pmf | tptuple) (',' aconstlist '->' (pmf | tptuple))* '}' ;
+aconstlistmap : '{' aconstlist '->' tptupleexp (',' aconstlist '->' tptupleexp)* '}' ;
 
 // list of arithmetic constants
-aconstlist : '(' aconst (',' aconst)* ')' ;
+aconstlist : '(' (aconst (',' aconst)*)? ')' ;
+
+tptupleexp : pmf
+           | tptuple
+           ;
 
 // time/power probability mass functions
 pmf : '{' tptuple '->' NUMBER (',' tptuple '->' NUMBER)* '}' ;

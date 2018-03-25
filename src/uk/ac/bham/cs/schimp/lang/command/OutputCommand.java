@@ -1,12 +1,14 @@
 package uk.ac.bham.cs.schimp.lang.command;
 
 import java.util.Arrays;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.stream.Collectors;
 
 import uk.ac.bham.cs.schimp.ProbabilityMassFunction;
 import uk.ac.bham.cs.schimp.exec.ProgramExecutionContext;
 import uk.ac.bham.cs.schimp.exec.ProgramExecutionException;
+import uk.ac.bham.cs.schimp.lang.expression.arith.ArithmeticConstant;
 import uk.ac.bham.cs.schimp.lang.expression.arith.ArithmeticExpression;
 import uk.ac.bham.cs.schimp.source.SyntaxCheckContext;
 import uk.ac.bham.cs.schimp.source.SyntaxException;
@@ -29,9 +31,10 @@ public class OutputCommand extends Command {
 	public ProbabilityMassFunction<ProgramExecutionContext> execute(ProgramExecutionContext context) throws ProgramExecutionException {
 		ProgramExecutionContext succeedingContext = context.clone();
 		
-		// TODO: outputs are time-sensitive in the formal semantics
-		exps.stream().forEachOrdered(e -> succeedingContext.outputs.add(e.evaluate(succeedingContext)));
+		List<ArithmeticConstant> currentTimeOutputs = succeedingContext.outputs.computeIfAbsent(succeedingContext.elapsedTime, i -> new LinkedList<>());
+		exps.stream().forEachOrdered(e -> currentTimeOutputs.add(e.evaluate(succeedingContext)));
 		
+		if (destroyBlockScopeFrames > 0) succeedingContext.destroyBlockScopeFrames(destroyBlockScopeFrames);
 		succeedingContext.setNextCommand(nextCommand);
 		
 		ProbabilityMassFunction<ProgramExecutionContext> pmf = new ProbabilityMassFunction<>();

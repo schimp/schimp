@@ -21,6 +21,7 @@ public class SkipCommand extends Command {
 	public ProbabilityMassFunction<ProgramExecutionContext> execute(ProgramExecutionContext context) throws ProgramExecutionException {
 		ProgramExecutionContext succeedingContext = context.clone();
 		
+		if (destroyBlockScopeFrames > 0) succeedingContext.destroyBlockScopeFrames(destroyBlockScopeFrames);
 		succeedingContext.setNextCommand(nextCommand);
 		
 		ProbabilityMassFunction<ProgramExecutionContext> pmf = new ProbabilityMassFunction<>();

@@ -8,6 +8,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.javatuples.Pair;
+
 import parser.State;
 import parser.Values;
 import parser.VarList;
@@ -25,6 +27,7 @@ import prism.PrismFileLog;
 import prism.PrismLangException;
 import uk.ac.bham.cs.schimp.ProbabilityMassFunction;
 import uk.ac.bham.cs.schimp.lang.Program;
+import uk.ac.bham.cs.schimp.source.FunctionModelSourceFile;
 import uk.ac.bham.cs.schimp.source.SourceFile;
 import uk.ac.bham.cs.schimp.source.SyntaxException;
 
@@ -346,8 +349,14 @@ public class PRISMModelGenerator implements ModelGenerator {
 	
 	public static void main(String[] args) {
 		try {
+			Map<Pair<String, Integer>, FunctionModel> functionModels = null;
+			if (args.length > 1) {
+				FunctionModelSourceFile functionModelSource = new FunctionModelSourceFile(new File(args[1]));
+				functionModels = functionModelSource.parse();
+			}
+			
 			SourceFile source = new SourceFile(new File(args[0]));
-			Program p = source.parse();
+			Program p = source.parse(functionModels);
 			System.out.println(p.toString());
 			
 			Prism prism = new Prism(new PrismFileLog("stdout"));
