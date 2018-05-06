@@ -1,7 +1,7 @@
 grammar SCHIMP;
 
 // schimp program
-program : (cmdinitial ';')* cmdfunction (';' cmdfunction)* ';' cmdinvoke ;
+program : (cmdinitial ';')* (cmdnew ';')* cmdfunction (';' cmdfunction)* ';' cmdinvoke ;
 
 // commands
 cmdinitial : 'initial' IDENTIFIER ':=' (pmf | aexp) ;

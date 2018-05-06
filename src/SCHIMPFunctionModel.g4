@@ -1,7 +1,7 @@
 grammar SCHIMPFunctionModel;
 
 // list of function models
-functionmodellist : functionmodel (';' functionmodel)* ;
+functionmodellist : (functionmodel (';' functionmodel)*)? ;
 
 // function model
 functionmodel : 'model' IDENTIFIER '/' NUMBER ':=' aconstlistmap ;

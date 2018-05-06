@@ -12,9 +12,11 @@ import org.javatuples.Pair;
 
 import uk.ac.bham.cs.schimp.exec.CommandTable;
 import uk.ac.bham.cs.schimp.lang.Block;
+import uk.ac.bham.cs.schimp.lang.command.Command;
 import uk.ac.bham.cs.schimp.lang.command.FunctionCommand;
 import uk.ac.bham.cs.schimp.lang.command.InitialCommand;
 import uk.ac.bham.cs.schimp.lang.command.InvokeCommand;
+import uk.ac.bham.cs.schimp.lang.command.NewCommand;
 import uk.ac.bham.cs.schimp.source.ControlFlowContext;
 import uk.ac.bham.cs.schimp.source.SyntaxCheckContext;
 import uk.ac.bham.cs.schimp.source.SyntaxException;
@@ -25,22 +27,27 @@ public class Program extends Block {
 	private CommandTable commandTable = new CommandTable();
 	
 	private List<InitialCommand> initialCommands;
+	private List<NewCommand> newCommands;
 	private List<FunctionCommand> functionCommands;
 	private InvokeCommand initialInvokeCommand;
 	
-	public Program(List<InitialCommand> initialCommands, List<FunctionCommand> functionCommands, InvokeCommand initialInvokeCommand) {
+	public Program(List<InitialCommand> initialCommands, List<NewCommand> newCommands, List<FunctionCommand> functionCommands, InvokeCommand initialInvokeCommand) {
 		super(
 			Stream.concat(
 				(initialCommands == null ? Collections.<InitialCommand>emptyList() : initialCommands).stream(),
 				Stream.concat(
-					(functionCommands == null ? Collections.<FunctionCommand>emptyList() : functionCommands).stream(),
-					Arrays.asList(initialInvokeCommand).stream()
+					(newCommands == null ? Collections.<NewCommand>emptyList() : newCommands).stream(),
+					Stream.concat(
+						(functionCommands == null ? Collections.<FunctionCommand>emptyList() : functionCommands).stream(),
+						Arrays.asList(initialInvokeCommand).stream()
+					)
 				)
 			)
 			.collect(Collectors.toList())
 		);
 		
 		this.initialCommands = initialCommands;
+		this.newCommands = newCommands;
 		this.functionCommands = functionCommands;
 		this.initialInvokeCommand = initialInvokeCommand;
 	}
@@ -86,16 +93,18 @@ public class Program extends Block {
 		// Program
 		functionCommands.stream().forEach(f -> f.resolveControlFlow(context));
 		
-		// the control flow of a Program is the execution of the InitialCommands followed by the execution of the
-		// initial InvokeCommand, so treat the Program as a CommandList containing the InitialCommands and InvokeCommand
-		for (int i = 0; i < initialCommands.size(); i++) {
-			if (i == initialCommands.size() - 1) {
+		// the control flow of a Program is the execution of any InitialCommands and NewCommands followed by the
+		// execution of the initial InvokeCommand, so treat the Program as a CommandList containing the InitialCommands,
+		// NewCommands and InvokeCommand
+		List<Command> initialAndNewCommands = Stream.concat(initialCommands.stream(), newCommands.stream()).collect(Collectors.toList());
+		for (int i = 0; i < initialAndNewCommands.size(); i++) {
+			if (i == initialAndNewCommands.size() - 1) {
 				context.nextCommand = initialInvokeCommand;
 			} else {
-				context.nextCommand = initialCommands.get(i + 1);
+				context.nextCommand = initialAndNewCommands.get(i + 1);
 			}
 			
-			initialCommands.get(i).resolveControlFlow(context);
+			initialAndNewCommands.get(i).resolveControlFlow(context);
 		}
 		context.nextCommand = null;
 		initialInvokeCommand.resolveControlFlow(context);

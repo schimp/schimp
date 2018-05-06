@@ -108,6 +108,7 @@ public class InvokeCommand extends Command {
 				ProgramExecutionContext nonAtomicSucceedingContext = succeedingContext.clone();
 				
 				nonAtomicSucceedingContext.elapsedTime += tp.getValue0();
+				nonAtomicSucceedingContext.totalPowerConsumption += tp.getValue1();
 				nonAtomicSucceedingContext.powerConsumption.merge(nonAtomicSucceedingContext.elapsedTime, tp.getValue1(), (existingP, newP) -> existingP + newP);
 				
 				succeedingPMF.add(nonAtomicSucceedingContext, powerConsumptionPMF.probabilityOf(tp));

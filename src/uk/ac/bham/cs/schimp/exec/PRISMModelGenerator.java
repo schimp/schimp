@@ -16,7 +16,6 @@ import parser.VarList;
 import parser.ast.Declaration;
 import parser.ast.DeclarationInt;
 import parser.ast.Expression;
-import parser.ast.RewardStruct;
 import parser.type.Type;
 import parser.type.TypeInt;
 import prism.ModelGenerator;
@@ -51,6 +50,9 @@ public class PRISMModelGenerator implements ModelGenerator {
 	
 	private State[] succeedingStates;
 	private double[] succeedingStateProbabilities;
+	
+	private Map<Integer, Integer> stateTimeConsumptions = new HashMap<>();
+	private Map<Integer, Integer> statePowerConsumptions = new HashMap<>();
 	
 	// the probability distribution over the ProgramExecutionStates that succeed the one currently being executed
 	//private ProbabilityMassFunction<ProgramExecutionContext> succeedingContexts;
@@ -201,7 +203,9 @@ public class PRISMModelGenerator implements ModelGenerator {
 		// ProgramExecutionContext, and its only succeeding ProgramExecutionContext is itself (i.e. a self-loop)
 		ProbabilityMassFunction<ProgramExecutionContext> succeedingContexts;
 		if (executingContext.executingCommand == null) {
-			//System.out.println(exploringStateID + ": terminating state");
+			System.out.println(exploringStateID + ": terminating state");
+			System.out.println(executingContext.toString());
+			
 			succeedingContexts = new ProbabilityMassFunction<>();
 			succeedingContexts.add(executingContext, "1");
 			succeedingContexts.finalise();
@@ -223,8 +227,10 @@ public class PRISMModelGenerator implements ModelGenerator {
 		// assign a prism State object to each succeeding ProgramExecutionContext; if a particular
 		// ProgramExecutionContext has been encountered before, reuse the previous id when creating the succeeding prism
 		// State object
-		succeedingStates = new State[succeedingContexts.elements().size()];
-		succeedingStateProbabilities = new double[succeedingContexts.elements().size()];
+		int succeedingStateCount = succeedingContexts.elements().size();
+		succeedingStates = new State[succeedingStateCount];
+		succeedingStateProbabilities = new double[succeedingStateCount];
+		
 		int index = 0;
 		for (ProgramExecutionContext c : succeedingContexts.elements()) {
 			//System.out.println("succeeding state " + index + ", p=" + succeedingContexts.probabilityOf(c).doubleValue() + ":");
@@ -244,6 +250,9 @@ public class PRISMModelGenerator implements ModelGenerator {
 			
 			succeedingStates[index] = new State(1).setValue(0, succeedingStateID);
 			succeedingStateProbabilities[index] = succeedingContexts.probabilityOf(c).doubleValue();
+			
+			stateTimeConsumptions.put(succeedingStateID, c.elapsedTime - executingContext.elapsedTime);
+			statePowerConsumptions.put(succeedingStateID, c.totalPowerConsumption - executingContext.totalPowerConsumption);
 			
 			index++;
 		}
@@ -308,42 +317,39 @@ public class PRISMModelGenerator implements ModelGenerator {
 	}
 	
 	//==========================================================================
-	// we don't currently use reward structures
+	// reward structures are used to represent the time and power consumption of schimp programs:
+	// 0 -> time consumption
+	// 1 -> power consumption
 
 	@Override
 	public int getNumRewardStructs() {
-		return 0;
-	}
-
-	@Override
-	public RewardStruct getRewardStruct(int i) {
-		return null;
-	}
-
-	@Override
-	public int getRewardStructIndex(String name) {
-		return -1;
+		return 2;
 	}
 
 	@Override
 	public List<String> getRewardStructNames() {
-		return Collections.<String>emptyList();
+		return Arrays.asList("time", "power");
 	}
 
 	@Override
 	public boolean rewardStructHasTransitionRewards(int i) {
+		// rewards are tied to states, not transitions
 		return false;
 	}
 	
 	@Override
 	public double getStateReward(int r, State state) throws PrismException {
-		return 0;
+		int stateID = (int)state.varValues[0];
+		
+		return r == 0 ? stateTimeConsumptions.get(stateID) : statePowerConsumptions.get(stateID);
 	}
 
+	/*
 	@Override
 	public double getStateActionReward(int r, State state, Object action) throws PrismException {
 		return 0;
 	}
+	*/
 	
 	//==========================================================================
 	

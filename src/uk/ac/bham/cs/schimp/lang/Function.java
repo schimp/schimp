@@ -3,7 +3,6 @@ package uk.ac.bham.cs.schimp.lang;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.javatuples.Pair;

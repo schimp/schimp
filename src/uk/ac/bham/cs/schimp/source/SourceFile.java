@@ -17,7 +17,6 @@ import org.javatuples.Pair;
 
 import uk.ac.bham.cs.schimp.ProbabilityMassFunction;
 import uk.ac.bham.cs.schimp.exec.FunctionModel;
-import uk.ac.bham.cs.schimp.exec.ProgramExecutionContext;
 import uk.ac.bham.cs.schimp.lang.*;
 import uk.ac.bham.cs.schimp.lang.command.*;
 import uk.ac.bham.cs.schimp.lang.expression.arith.*;
@@ -63,17 +62,21 @@ public class SourceFile {
 	private static class ProgramVisitor extends SCHIMPBaseVisitor<Program> {
 		@Override
 		public Program visitProgram(SCHIMPParser.ProgramContext ctx) {
+			CommandVisitor commandVisitor = new CommandVisitor();
+			
 			InitialCommandVisitor initialCommandVisitor = new InitialCommandVisitor();
 			List<InitialCommand> initialCommands = ctx.cmdinitial().stream().map(c -> c.accept(initialCommandVisitor)).collect(Collectors.toList());
+			
+			// TODO: check that these are actually new commands
+			List<NewCommand> newCommands = ctx.cmdnew().stream().map(c -> (NewCommand)c.accept(commandVisitor)).collect(Collectors.toList());
 			
 			FunctionCommandVisitor functionCommandVisitor = new FunctionCommandVisitor();
 			List<FunctionCommand> functions = ctx.cmdfunction().stream().map(c -> c.accept(functionCommandVisitor)).collect(Collectors.toList());
 			
 			// TODO: check that this is actually an invoke command
-			CommandVisitor invokeCommandVisitor = new CommandVisitor();
-			InvokeCommand invokeCommand = (InvokeCommand)ctx.cmdinvoke().accept(invokeCommandVisitor);
+			InvokeCommand invokeCommand = (InvokeCommand)ctx.cmdinvoke().accept(commandVisitor);
 			
-			return new Program(initialCommands, functions, invokeCommand);
+			return new Program(initialCommands, newCommands, functions, invokeCommand);
 		}
 	}
     

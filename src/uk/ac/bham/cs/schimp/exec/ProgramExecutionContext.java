@@ -24,6 +24,7 @@ public class ProgramExecutionContext implements Cloneable {
 	public VariableBindings variableBindings = new VariableBindings();
 	public VariableScopeFrame initialVariableBindings = new VariableScopeFrame(VariableScopeFrame.Type.BLOCK);
 	public int elapsedTime = 0;
+	public int totalPowerConsumption = 0;
 	public Map<Integer, Integer> powerConsumption = new LinkedHashMap<>();
 	public Map<Integer, List<ArithmeticConstant>> outputs = new LinkedHashMap<>();
 	
@@ -71,6 +72,7 @@ public class ProgramExecutionContext implements Cloneable {
 		clonedContext.variableBindings = variableBindings.clone();
 		clonedContext.initialVariableBindings = initialVariableBindings.clone();
 		clonedContext.elapsedTime = elapsedTime;
+		clonedContext.totalPowerConsumption = totalPowerConsumption;
 		clonedContext.powerConsumption.putAll(powerConsumption);
 		// we can shallow-clone ArithmeticConstant objects, because they're never supposed to change
 		outputs.entrySet().stream().forEach(x -> clonedContext.outputs.put(x.getKey(), new LinkedList<>(x.getValue())));
@@ -123,6 +125,11 @@ public class ProgramExecutionContext implements Cloneable {
 		s.append(indentation(indent + 1));
 		s.append("elapsedTime: ");
 		s.append(elapsedTime);
+		s.append("\n");
+		
+		s.append(indentation(indent + 1));
+		s.append("totalPowerConsumption: ");
+		s.append(totalPowerConsumption);
 		s.append("\n");
 		
 		s.append(indentation(indent + 1));
