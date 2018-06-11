@@ -38,6 +38,10 @@ public class ProgramExecutionContext implements Cloneable {
 	
 	private ProgramExecutionContext() {}
 	
+	public boolean isTerminating() {
+		return executingCommand == null;
+	}
+	
 	public void setNextCommand(Command nextCommand) {
 		if (nextCommand == null) {
 			try {

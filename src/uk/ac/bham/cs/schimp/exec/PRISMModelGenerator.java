@@ -35,6 +35,9 @@ public class PRISMModelGenerator implements ModelGenerator {
 	// the schimp program being executed by this model generator 
 	private Program program;
 	
+	// if set to true, deterministic transitions between states are not represented in the generated model
+	private boolean collapseDeterministicTransitions;
+	
 	// a Map from ids representing unique prism State objects to corresponding schimp ProgramExecutionContext objects
 	private Map<Integer, ProgramExecutionContext> schimpExecutionContexts = new HashMap<>();
 	
@@ -60,8 +63,9 @@ public class PRISMModelGenerator implements ModelGenerator {
 	private static List<String> prismVarNames = Arrays.asList("id");
 	private static List<Type> prismVarTypes = Arrays.asList(TypeInt.getInstance());
 	
-	public PRISMModelGenerator(Program program) {
+	public PRISMModelGenerator(Program program, boolean collapseDeterministicTransitions) {
 		this.program = program;
+		this.collapseDeterministicTransitions = collapseDeterministicTransitions;
 	}
 	
 	//==========================================================================
@@ -199,19 +203,34 @@ public class PRISMModelGenerator implements ModelGenerator {
 		//System.out.println(executingContext.toString());
 		
 		// execute the next command in the ProgramExecutionContext to discover the probability distribution over its
-		// succeeding ProgramExecutionContexts; if the next command is null, the schimp program has terminated in this
-		// ProgramExecutionContext, and its only succeeding ProgramExecutionContext is itself (i.e. a self-loop)
+		// succeeding ProgramExecutionContexts
 		ProbabilityMassFunction<ProgramExecutionContext> succeedingContexts;
-		if (executingContext.executingCommand == null) {
+		if (executingContext.isTerminating()) {
 			System.out.println(exploringStateID + ": terminating state");
 			System.out.println(executingContext.toString());
 			
+			// if the schimp program has terminated in this ProgramExecutionContext, its only succeeding
+			// ProgramExecutionContext is itself (i.e. a self-loop)
 			succeedingContexts = new ProbabilityMassFunction<>();
 			succeedingContexts.add(executingContext, "1");
 			succeedingContexts.finalise();
 		} else {
 			try {
-				succeedingContexts = executingContext.executingCommand.execute(executingContext);
+				// if there is a single succeeding ProgramExecutionContext in which the
+				// schimp program hasn't terminated and if we are collapsing deterministic transitions, continue executing
+				// succeeding ProgramExecutionContexts until we encounter multiple succeeding ProgramExecutionContexts or a
+				// terminating ProgramExecutionContext
+				if (collapseDeterministicTransitions) {
+					ProgramExecutionContext[] c = { executingContext };
+					do {
+						succeedingContexts = c[0].executingCommand.execute(c[0]);
+					} while (
+						succeedingContexts.elements().size() == 1 &&
+						!(c = succeedingContexts.elements().toArray(c))[0].isTerminating()
+					);
+				} else {
+					succeedingContexts = executingContext.executingCommand.execute(executingContext);
+				}
 			} catch (ProgramExecutionException e) {
 				// TODO: wrap this properly
 				e.printStackTrace(System.err);
@@ -369,7 +388,7 @@ public class PRISMModelGenerator implements ModelGenerator {
 			prism.initialise();
 			prism.setEngine(Prism.EXPLICIT);
 			
-			PRISMModelGenerator modelGenerator = new PRISMModelGenerator(p);
+			PRISMModelGenerator modelGenerator = new PRISMModelGenerator(p, false);
 			prism.loadModelGenerator(modelGenerator);
 			prism.exportTransToFile(true, Prism.EXPORT_DOT_STATES, new File(args[0] + ".dot"));
 		} catch (IOException e) {
