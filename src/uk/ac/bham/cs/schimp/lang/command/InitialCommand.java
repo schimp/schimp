@@ -3,12 +3,15 @@ package uk.ac.bham.cs.schimp.lang.command;
 import java.util.Iterator;
 import java.util.stream.Collectors;
 
+import org.apache.commons.math3.fraction.Fraction;
+
 import uk.ac.bham.cs.schimp.ProbabilityMassFunction;
 import uk.ac.bham.cs.schimp.exec.EvaluationException;
 import uk.ac.bham.cs.schimp.exec.ProgramExecutionContext;
 import uk.ac.bham.cs.schimp.exec.ProgramExecutionException;
 import uk.ac.bham.cs.schimp.lang.expression.arith.ArithmeticConstant;
 import uk.ac.bham.cs.schimp.lang.expression.arith.ArithmeticExpression;
+import uk.ac.bham.cs.schimp.lang.expression.arith.ArithmeticExpressionProbabilityMassFunction;
 import uk.ac.bham.cs.schimp.lang.expression.arith.VariableReference;
 import uk.ac.bham.cs.schimp.source.SyntaxCheckContext;
 import uk.ac.bham.cs.schimp.source.SyntaxException;
@@ -16,33 +19,33 @@ import uk.ac.bham.cs.schimp.source.SyntaxException;
 public class InitialCommand extends Command {
 	
 	private VariableReference v;
-	private ProbabilityMassFunction<ArithmeticExpression> pmf;
+	private ArithmeticExpressionProbabilityMassFunction pmf;
 	
-	public InitialCommand(VariableReference v, ProbabilityMassFunction<ArithmeticExpression> pmf) {
+	public InitialCommand(VariableReference v, ArithmeticExpressionProbabilityMassFunction pmf) {
 		super();
 		this.v = v;
 		this.pmf = pmf;
-		this.pmf.finalise();
 	}
 	
 	public InitialCommand(VariableReference v, ArithmeticExpression exp) {
 		super();
 		this.v = v;
-		pmf = new ProbabilityMassFunction<ArithmeticExpression>();
-		pmf.add(exp, "1");
-		pmf.finalise();
+		pmf = new ArithmeticExpressionProbabilityMassFunction();
+		pmf.add(exp, new ArithmeticConstant(1));
 	}
 	
 	@Override
 	public void check(SyntaxCheckContext context) throws SyntaxException {
 		super.check(context);
 		
-		// ArithmeticExpressions in the domain of the pmf must be checked first (before the VariableReference on the
-		// left-hand side is recorded in the SyntaxCheckContext)
+		// ArithmeticExpressions in the domain and range of the pmf must be checked first (before the VariableReference
+		// on the left-hand side is recorded in the SyntaxCheckContext)
 		try {
 			Iterator<ArithmeticExpression> elements = pmf.elements().iterator();
 			while (elements.hasNext()) {
-				elements.next().check(context);
+				ArithmeticExpression ae = elements.next();
+				ae.check(context);
+				pmf.probabilityOf(ae).check(context);
 			}
 		} catch (SyntaxException e) {
 			throw e;
@@ -69,10 +72,12 @@ public class InitialCommand extends Command {
 		pmf.elements().stream().forEach(e -> {
 			ProgramExecutionContext succeedingContext = context.clone();
 			
+			Fraction succeedingContextProbability;
 			try {
 				ArithmeticConstant a = e.evaluate(succeedingContext);
 				succeedingContext.variableBindings.define(v.getName(), a);
 				succeedingContext.initialVariableBindings.define(v.getName(), a);
+				succeedingContextProbability = pmf.probabilityOf(e).evaluate(context).toFraction();
 			} catch (EvaluationException ex) {
 				// TODO: wrap this exception properly
 				throw new ProgramExecutionException(ex.getMessage());
@@ -81,10 +86,8 @@ public class InitialCommand extends Command {
 			if (destroyBlockScopeFrames > 0) succeedingContext.destroyBlockScopeFrames(destroyBlockScopeFrames);
 			succeedingContext.setNextCommand(nextCommand);
 			
-			succeedingPMF.add(succeedingContext, pmf.probabilityOf(e));
+			succeedingPMF.add(succeedingContext, succeedingContextProbability);
 		});
-		
-		succeedingPMF.finalise();
 		
 		return succeedingPMF;
 	}
@@ -105,7 +108,7 @@ public class InitialCommand extends Command {
 		s.append(" := {\n");
 		s.append(
 			pmf.elements().stream()
-			.map((e -> e.toString(indent + 1) + " -> " + pmf.probabilityOf(e).toString(true)))
+			.map((e -> e.toString(indent + 1) + " -> " + pmf.probabilityOf(e).toString()))
 			.collect(Collectors.joining(",\n"))
 		);
 		s.append("\n");
@@ -124,7 +127,7 @@ public class InitialCommand extends Command {
 		s.append(" := {\n");
 		s.append(
 			pmf.elements().stream()
-			.map((e -> e.toSourceString(indent + 1) + " -> " + pmf.probabilityOf(e).toString(true)))
+			.map((e -> e.toSourceString(indent + 1) + " -> " + pmf.probabilityOf(e).toString()))
 			.collect(Collectors.joining(",\n"))
 		);
 		s.append("\n");

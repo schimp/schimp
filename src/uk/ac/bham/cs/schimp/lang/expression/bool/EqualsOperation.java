@@ -25,7 +25,7 @@ public class EqualsOperation extends BooleanExpression {
 	
 	@Override
 	public BooleanConstant evaluate(ProgramExecutionContext context) throws EvaluationException {
-		return new BooleanConstant(left.evaluate(context).toInteger() == right.evaluate(context).toInteger());
+		return new BooleanConstant(left.evaluate(context).toFraction().compareTo(right.evaluate(context).toFraction()) == 0);
 	}
 	
 	public String toString(int indent) {

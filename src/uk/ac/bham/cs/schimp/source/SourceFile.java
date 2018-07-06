@@ -15,7 +15,6 @@ import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.TokenStream;
 import org.javatuples.Pair;
 
-import uk.ac.bham.cs.schimp.ProbabilityMassFunction;
 import uk.ac.bham.cs.schimp.exec.FunctionModel;
 import uk.ac.bham.cs.schimp.lang.*;
 import uk.ac.bham.cs.schimp.lang.command.*;
@@ -86,13 +85,12 @@ public class SourceFile {
 			String variableName = ctx.IDENTIFIER().getText();
 			VariableReference variable = new VariableReference(variableName);
 			
-			ProbabilityMassFunction<ArithmeticExpression> pmfValue;
+			ArithmeticExpressionProbabilityMassFunction pmfValue;
 			if (ctx.aexp() != null) {
 				ArithmeticExpressionVisitor aexpVisitor = new ArithmeticExpressionVisitor();
 				ArithmeticExpression aexpValue = ctx.aexp().accept(aexpVisitor);
-				pmfValue = new ProbabilityMassFunction<ArithmeticExpression>();
-				pmfValue.add(aexpValue, "1");
-				pmfValue.finalise();
+				pmfValue = new ArithmeticExpressionProbabilityMassFunction();
+				pmfValue.add(aexpValue, new ArithmeticConstant(1));
 			} else { // if (ctx.pmf() != null)
 				ProbabilityMassFunctionVisitor pmfVisitor = new ProbabilityMassFunctionVisitor();
 				pmfValue = ctx.pmf().accept(pmfVisitor);
@@ -143,13 +141,12 @@ public class SourceFile {
 			String variableName = ctx.IDENTIFIER().getText();
 			VariableReference variable = new VariableReference(variableName);
 			
-			ProbabilityMassFunction<ArithmeticExpression> pmfValue;
+			ArithmeticExpressionProbabilityMassFunction pmfValue;
 			if (ctx.aexp() != null) {
 				ArithmeticExpressionVisitor aexpVisitor = new ArithmeticExpressionVisitor();
 				ArithmeticExpression aexpValue = ctx.aexp().accept(aexpVisitor);
-				pmfValue = new ProbabilityMassFunction<ArithmeticExpression>();
-				pmfValue.add(aexpValue, "1");
-				pmfValue.finalise();
+				pmfValue = new ArithmeticExpressionProbabilityMassFunction();
+				pmfValue.add(aexpValue, new ArithmeticConstant(1));
 			} else { // if (ctx.pmf() != null)
 				ProbabilityMassFunctionVisitor pmfVisitor = new ProbabilityMassFunctionVisitor();
 				pmfValue = ctx.pmf().accept(pmfVisitor);
@@ -165,13 +162,12 @@ public class SourceFile {
 			String variableName = ctx.IDENTIFIER().getText();
 			VariableReference variable = new VariableReference(variableName);
 			
-			ProbabilityMassFunction<ArithmeticExpression> pmfValue;
+			ArithmeticExpressionProbabilityMassFunction pmfValue;
 			if (ctx.aexp() != null) {
 				ArithmeticExpressionVisitor aexpVisitor = new ArithmeticExpressionVisitor();
 				ArithmeticExpression aexpValue = ctx.aexp().accept(aexpVisitor);
-				pmfValue = new ProbabilityMassFunction<ArithmeticExpression>();
-				pmfValue.add(aexpValue, "1");
-				pmfValue.finalise();
+				pmfValue = new ArithmeticExpressionProbabilityMassFunction();
+				pmfValue.add(aexpValue, new ArithmeticConstant(1));
 			} else { // if (ctx.pmf() != null)
 				ProbabilityMassFunctionVisitor pmfVisitor = new ProbabilityMassFunctionVisitor();
 				pmfValue = ctx.pmf().accept(pmfVisitor);
@@ -234,20 +230,17 @@ public class SourceFile {
 		}
 	}
 	
-	private static class ProbabilityMassFunctionVisitor extends SCHIMPBaseVisitor<ProbabilityMassFunction<ArithmeticExpression>> {
+	private static class ProbabilityMassFunctionVisitor extends SCHIMPBaseVisitor<ArithmeticExpressionProbabilityMassFunction> {
 		@Override
-		public ProbabilityMassFunction<ArithmeticExpression> visitPmf(SCHIMPParser.PmfContext ctx) {
-			ProbabilityMassFunction<ArithmeticExpression> pmf = new ProbabilityMassFunction<ArithmeticExpression>();
+		public ArithmeticExpressionProbabilityMassFunction visitPmf(SCHIMPParser.PmfContext ctx) {
+			ArithmeticExpressionProbabilityMassFunction pmf = new ArithmeticExpressionProbabilityMassFunction();
 			
 			ArithmeticExpressionVisitor aexpVisitor = new ArithmeticExpressionVisitor();
 			List<ArithmeticExpression> aexps = ctx.aexp().stream().map(c -> c.accept(aexpVisitor)).collect(Collectors.toList());
-			List<String> probabilities = ctx.NUMBER().stream().map(f -> f.getSymbol().getText()).collect(Collectors.toList());
 			
-			for (int i = 0; i < aexps.size(); i++) {
-				pmf.add(aexps.get(i), probabilities.get(i));
+			for (int i = 0; i < aexps.size(); i += 2) {
+				pmf.add(aexps.get(i), aexps.get(i + 1));
 			}
-			
-			pmf.finalise();
 			
 			return pmf;
 		}

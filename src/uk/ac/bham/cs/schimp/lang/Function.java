@@ -21,8 +21,7 @@ public class Function extends Block {
 	
 	public static ProbabilityMassFunction<Pair<Integer, Integer>> getAtomicFunctionModel() {
 		ProbabilityMassFunction<Pair<Integer, Integer>> pmf = new ProbabilityMassFunction<>();
-		pmf.add(new Pair<Integer, Integer>(0, 0), "1");
-		pmf.finalise();
+		pmf.add(new Pair<Integer, Integer>(0, 0), 1);
 		return pmf;
 	}
 	

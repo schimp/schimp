@@ -96,8 +96,7 @@ public class IfCommand extends Command {
 		}
 		
 		ProbabilityMassFunction<ProgramExecutionContext> pmf = new ProbabilityMassFunction<>();
-		pmf.add(succeedingContext, "1");
-		pmf.finalise();
+		pmf.add(succeedingContext, 1);
 		
 		return pmf;
 	}

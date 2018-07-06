@@ -114,10 +114,8 @@ public class InvokeCommand extends Command {
 				succeedingPMF.add(nonAtomicSucceedingContext, powerConsumptionPMF.probabilityOf(tp));
 			}
 		} else { // functionRef.getFunction().getType() == Function.ResourceConsumptionType.ATOMIC
-			succeedingPMF.add(succeedingContext, "1");
+			succeedingPMF.add(succeedingContext, 1);
 		}
-		
-		succeedingPMF.finalise();
 		
 		return succeedingPMF;
 	}

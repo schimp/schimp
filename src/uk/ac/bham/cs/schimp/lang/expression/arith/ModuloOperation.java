@@ -1,5 +1,7 @@
 package uk.ac.bham.cs.schimp.lang.expression.arith;
 
+import org.apache.commons.math3.fraction.Fraction;
+
 import uk.ac.bham.cs.schimp.exec.EvaluationException;
 import uk.ac.bham.cs.schimp.exec.ProgramExecutionContext;
 import uk.ac.bham.cs.schimp.source.SyntaxCheckContext;
@@ -24,7 +26,9 @@ public class ModuloOperation extends ArithmeticExpression {
 	
 	@Override
 	public ArithmeticConstant evaluate(ProgramExecutionContext context) throws EvaluationException {
-		return new ArithmeticConstant(left.evaluate(context).toInteger() % right.evaluate(context).toInteger());
+		Fraction leftFraction = left.evaluate(context).toFraction();
+		Fraction rightFraction = right.evaluate(context).toFraction();
+		return new ArithmeticConstant(rightFraction.subtract(leftFraction.divide(rightFraction).intValue()));
 	}
 	
 	public String toString(int indent) {

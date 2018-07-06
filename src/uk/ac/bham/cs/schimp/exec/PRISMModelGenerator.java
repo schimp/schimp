@@ -212,8 +212,7 @@ public class PRISMModelGenerator implements ModelGenerator {
 			// if the schimp program has terminated in this ProgramExecutionContext, its only succeeding
 			// ProgramExecutionContext is itself (i.e. a self-loop)
 			succeedingContexts = new ProbabilityMassFunction<>();
-			succeedingContexts.add(executingContext, "1");
-			succeedingContexts.finalise();
+			succeedingContexts.add(executingContext, 1);
 		} else {
 			try {
 				// if there is a single succeeding ProgramExecutionContext in which the

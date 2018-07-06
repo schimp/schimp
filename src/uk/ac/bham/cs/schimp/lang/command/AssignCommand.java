@@ -3,11 +3,15 @@ package uk.ac.bham.cs.schimp.lang.command;
 import java.util.Iterator;
 import java.util.stream.Collectors;
 
+import org.apache.commons.math3.fraction.Fraction;
+
 import uk.ac.bham.cs.schimp.ProbabilityMassFunction;
 import uk.ac.bham.cs.schimp.exec.EvaluationException;
 import uk.ac.bham.cs.schimp.exec.ProgramExecutionContext;
 import uk.ac.bham.cs.schimp.exec.ProgramExecutionException;
+import uk.ac.bham.cs.schimp.lang.expression.arith.ArithmeticConstant;
 import uk.ac.bham.cs.schimp.lang.expression.arith.ArithmeticExpression;
+import uk.ac.bham.cs.schimp.lang.expression.arith.ArithmeticExpressionProbabilityMassFunction;
 import uk.ac.bham.cs.schimp.lang.expression.arith.VariableReference;
 import uk.ac.bham.cs.schimp.source.SyntaxCheckContext;
 import uk.ac.bham.cs.schimp.source.SyntaxException;
@@ -15,9 +19,9 @@ import uk.ac.bham.cs.schimp.source.SyntaxException;
 public class AssignCommand extends Command {
 	
 	private VariableReference v;
-	private ProbabilityMassFunction<ArithmeticExpression> pmf;
+	private ArithmeticExpressionProbabilityMassFunction pmf;
 	
-	public AssignCommand(VariableReference v, ProbabilityMassFunction<ArithmeticExpression> pmf) {
+	public AssignCommand(VariableReference v, ArithmeticExpressionProbabilityMassFunction pmf) {
 		super();
 		this.v = v;
 		this.pmf = pmf;
@@ -26,9 +30,8 @@ public class AssignCommand extends Command {
 	public AssignCommand(VariableReference v, ArithmeticExpression exp) {
 		super();
 		this.v = v;
-		pmf = new ProbabilityMassFunction<ArithmeticExpression>();
-		pmf.add(exp, "1");
-		pmf.finalise();
+		pmf = new ArithmeticExpressionProbabilityMassFunction();
+		pmf.add(exp, new ArithmeticConstant(1));
 	}
 	
 	@Override
@@ -38,11 +41,13 @@ public class AssignCommand extends Command {
 		// the VariableReference on the left-hand side of the assignment must already be in scope here
 		v.check(context);
 		
-		// ArithmeticExpressions in the domain of the pmf must also be checked
+		// ArithmeticExpressions in the domain and range of the pmf must also be checked
 		try {
 			Iterator<ArithmeticExpression> elements = pmf.elements().iterator();
 			while (elements.hasNext()) {
-				elements.next().check(context);
+				ArithmeticExpression ae = elements.next();
+				ae.check(context);
+				pmf.probabilityOf(ae).check(context);
 			}
 		} catch (SyntaxException e) {
 			throw e;
@@ -56,8 +61,10 @@ public class AssignCommand extends Command {
 		pmf.elements().stream().forEach(e -> {
 			ProgramExecutionContext succeedingContext = context.clone();
 			
+			Fraction succeedingContextProbability;
 			try {
 				succeedingContext.variableBindings.assign(v.getName(), e.evaluate(succeedingContext));
+				succeedingContextProbability = pmf.probabilityOf(e).evaluate(context).toFraction();
 			} catch (EvaluationException ex) {
 				// TODO: wrap this exception properly
 				throw new ProgramExecutionException(ex.getMessage());
@@ -66,10 +73,8 @@ public class AssignCommand extends Command {
 			if (destroyBlockScopeFrames > 0) succeedingContext.destroyBlockScopeFrames(destroyBlockScopeFrames);
 			succeedingContext.setNextCommand(nextCommand);
 			
-			succeedingPMF.add(succeedingContext, pmf.probabilityOf(e));
+			succeedingPMF.add(succeedingContext, succeedingContextProbability);
 		});
-		
-		succeedingPMF.finalise();
 		
 		return succeedingPMF;
 	}
@@ -90,7 +95,7 @@ public class AssignCommand extends Command {
 		s.append(" := {\n");
 		s.append(
 			pmf.elements().stream()
-			.map((e -> e.toString(indent + 1) + " -> " + pmf.probabilityOf(e).toString(true)))
+			.map((e -> e.toString(indent + 1) + " -> " + pmf.probabilityOf(e).toString()))
 			.collect(Collectors.joining(",\n"))
 		);
 		s.append("\n");
@@ -108,7 +113,7 @@ public class AssignCommand extends Command {
 		s.append(" := {\n");
 		s.append(
 			pmf.elements().stream()
-			.map((e -> e.toSourceString(indent + 1) + " -> " + pmf.probabilityOf(e).toString(true)))
+			.map((e -> e.toSourceString(indent + 1) + " -> " + pmf.probabilityOf(e).toString()))
 			.collect(Collectors.joining(",\n"))
 		);
 		s.append("\n");

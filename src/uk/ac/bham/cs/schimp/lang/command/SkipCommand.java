@@ -25,8 +25,7 @@ public class SkipCommand extends Command {
 		succeedingContext.setNextCommand(nextCommand);
 		
 		ProbabilityMassFunction<ProgramExecutionContext> pmf = new ProbabilityMassFunction<>();
-		pmf.add(succeedingContext, "1");
-		pmf.finalise();
+		pmf.add(succeedingContext, 1);
 		
 		return pmf;
 	}

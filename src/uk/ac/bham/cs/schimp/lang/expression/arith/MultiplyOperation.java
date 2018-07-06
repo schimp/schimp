@@ -24,7 +24,7 @@ public class MultiplyOperation extends ArithmeticExpression {
 	
 	@Override
 	public ArithmeticConstant evaluate(ProgramExecutionContext context) throws EvaluationException {
-		return new ArithmeticConstant(left.evaluate(context).toInteger() * right.evaluate(context).toInteger());
+		return new ArithmeticConstant(left.evaluate(context).toFraction().multiply(right.evaluate(context).toFraction()));
 	}
 	
 	public String toString(int indent) {

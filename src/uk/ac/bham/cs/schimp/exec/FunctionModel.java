@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.stream.Collectors;
 
+import org.apache.commons.math3.fraction.Fraction;
 import org.javatuples.Pair;
 
 import uk.ac.bham.cs.schimp.ProbabilityMassFunction;
@@ -19,8 +20,7 @@ public class FunctionModel extends Syntax {
 	
 	static {
 		noConsumptionPMF = new ProbabilityMassFunction<>();
-		noConsumptionPMF.add(new Pair<Integer, Integer>(0, 0), "1");
-		noConsumptionPMF.finalise();
+		noConsumptionPMF.add(new Pair<Integer, Integer>(0, 0), new Fraction(1));
 	}
 	
 	private String name;
@@ -54,7 +54,7 @@ public class FunctionModel extends Syntax {
 			return model.stream()
 				.filter(tp -> {
 					for (int i = 0; i < invokeParameters.size(); i++) {
-						if (tp.getValue0().get(i) != null && tp.getValue0().get(i).toInteger() != invokeParameters.get(i).toInteger()) {
+						if (tp.getValue0().get(i) != null && tp.getValue0().get(i).toFraction().compareTo(invokeParameters.get(i).toFraction()) != 0) {
 							return false;
 						}
 					}
@@ -92,7 +92,7 @@ public class FunctionModel extends Syntax {
 				s.append(") -> {\n");
 				s.append(
 					p.getValue1().elements().stream()
-						.map(e -> indentation(indent + 2) + "(" + e.getValue0() + ", " + e.getValue1() + ") -> " + p.getValue1().probabilityOf(e).toString(true))
+						.map(e -> indentation(indent + 2) + "(" + e.getValue0() + ", " + e.getValue1() + ") -> " + p.getValue1().probabilityOf(e).toString())
 						.collect(Collectors.joining(",\n"))
 				);
 				s.append("\n");

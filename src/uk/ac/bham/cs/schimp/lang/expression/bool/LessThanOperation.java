@@ -25,7 +25,7 @@ public class LessThanOperation extends BooleanExpression {
 	
 	@Override
 	public BooleanConstant evaluate(ProgramExecutionContext context) throws EvaluationException {
-		return new BooleanConstant(left.evaluate(context).toInteger() < right.evaluate(context).toInteger());
+		return new BooleanConstant(left.evaluate(context).toFraction().compareTo(right.evaluate(context).toFraction()) == -1);
 	}
 	
 	public String toString(int indent) {

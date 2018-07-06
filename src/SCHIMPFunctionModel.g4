@@ -4,7 +4,7 @@ grammar SCHIMPFunctionModel;
 functionmodellist : (functionmodel (';' functionmodel)*)? ;
 
 // function model
-functionmodel : 'model' IDENTIFIER '/' NUMBER ':=' aconstlistmap ;
+functionmodel : 'model' IDENTIFIER '/' INTEGER ':=' aconstlistmap ;
 
 // mapping of lists of arithmetic constants to time/power probability mass functions
 aconstlistmap : '{' aconstlist '->' tptupleexp (',' aconstlist '->' tptupleexp)* '}' ;
@@ -17,21 +17,30 @@ tptupleexp : pmf
            ;
 
 // time/power probability mass functions
-pmf : '{' tptuple '->' NUMBER (',' tptuple '->' NUMBER)* '}' ;
+pmf : '{' tptuple '->' rational (',' tptuple '->' rational)* '}' ;
+
+// arithmetic constants (including '_' for "all arithmetic constants")
+aconst : rational # AconstRational
+       | '_'      # AconstAny
+       ;
 
 // time/power consumption tuple
-tptuple : '(' NUMBER ',' NUMBER ')' ;
+tptuple : '(' INTEGER ',' INTEGER ')' ;
 
 // function names
 IDENTIFIER : ([A-Za-z_])([A-Za-z0-9_])* ;
 
-// floating-point numbers/integers
-NUMBER : ('-')? [0-9]+ ('.' [0-9]+)? ;
+// integers
+INTEGER : ('-')? [0-9]+ ;
 
-// arithmetic constants (including '_' for "all arithmetic constants")
-aconst : NUMBER
-       | '_'
-       ;
+// rational number expressions
+rational : '(' rational ')'      # RationalParens
+         | rational '*' rational # RationalMultiply
+         | rational '/' rational # RationalDivide
+         | rational '+' rational # RationalAdd
+         | rational '-' rational # RationalSubtract
+         | INTEGER               # RationalInteger
+         ;
 
 // skip comments
 COMMENT :  '#' ~('\r' | '\n')*

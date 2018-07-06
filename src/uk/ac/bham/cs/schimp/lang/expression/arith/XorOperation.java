@@ -24,7 +24,8 @@ public class XorOperation extends ArithmeticExpression {
 	
 	@Override
 	public ArithmeticConstant evaluate(ProgramExecutionContext context) throws EvaluationException {
-		return new ArithmeticConstant(left.evaluate(context).toInteger() ^ right.evaluate(context).toInteger());
+		// TODO: this operation is only defined for integers, not rational numbers
+		return new ArithmeticConstant(left.evaluate(context).toFraction().intValue() ^ right.evaluate(context).toFraction().intValue());
 	}
 	
 	public String toString(int indent) {

@@ -11,6 +11,7 @@ import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.TokenStream;
+import org.apache.commons.math3.fraction.Fraction;
 import org.javatuples.Pair;
 
 import uk.ac.bham.cs.schimp.ProbabilityMassFunction;
@@ -69,7 +70,7 @@ public class FunctionModelSourceFile extends FunctionModelSource {
 			ArithmeticConstantListMapVisitor aconstlistmapVisitor = new ArithmeticConstantListMapVisitor();
 			
 			String functionName = ctx.IDENTIFIER().getText();
-			int functionArity = Integer.parseInt(ctx.NUMBER().getText());
+			int functionArity = Integer.parseInt(ctx.INTEGER().getText());
 			FunctionModel model = new FunctionModel(functionName, functionArity);
 			
 			ctx.aconstlistmap().accept(aconstlistmapVisitor)
@@ -121,8 +122,7 @@ public class FunctionModelSourceFile extends FunctionModelSource {
 				Pair<Integer, Integer> tptuple = ctx.tptuple().accept(tptupleVisitor);
 				
 				ProbabilityMassFunction<Pair<Integer, Integer>> pmf = new ProbabilityMassFunction<>();
-				pmf.add(tptuple, "1");
-				pmf.finalise();
+				pmf.add(tptuple, 1);
 				
 				return pmf;
 			} else { // if (ctx.pmf() != null)
@@ -140,15 +140,15 @@ public class FunctionModelSourceFile extends FunctionModelSource {
 			List<Pair<Integer, Integer>> tptuples = ctx.tptuple().stream()
 				.map(c -> c.accept(tptupleVisitor))
 				.collect(Collectors.toList());
-			List<String> probabilities = ctx.NUMBER().stream()
-				.map(f -> f.getSymbol().getText())
+			
+			RationalVisitor rationalVisitor = new RationalVisitor();
+			List<Fraction> rationals = ctx.rational().stream()
+				.map(c -> c.accept(rationalVisitor))
 				.collect(Collectors.toList());
 			
 			for (int i = 0; i < tptuples.size(); i++) {
-				pmf.add(tptuples.get(i), probabilities.get(i));
+				pmf.add(tptuples.get(i), rationals.get(i));
 			}
-			
-			pmf.finalise();
 			
 			return pmf;
 		}
@@ -158,20 +158,78 @@ public class FunctionModelSourceFile extends FunctionModelSource {
 		@Override
 		public Pair<Integer, Integer> visitTptuple(SCHIMPFunctionModelParser.TptupleContext ctx) {
 			return new Pair<>(
-				Integer.parseInt(ctx.NUMBER(0).getText()),
-				Integer.parseInt(ctx.NUMBER(1).getText())
+				Integer.parseInt(ctx.INTEGER(0).getText()),
+				Integer.parseInt(ctx.INTEGER(1).getText())
 			);
 		}
 	}
 	
 	private static class ArithmeticConstantVisitor extends SCHIMPFunctionModelBaseVisitor<ArithmeticConstant> {
 		@Override
-		public ArithmeticConstant visitAconst(SCHIMPFunctionModelParser.AconstContext ctx) {
-			if (ctx.NUMBER() != null) { // aconst := NUMBER
-				return new ArithmeticConstant(Integer.parseInt(ctx.NUMBER().getText()));
-			} else { // aconst := _
-				return null;
-			}
+		public ArithmeticConstant visitAconstRational(SCHIMPFunctionModelParser.AconstRationalContext ctx) {
+			RationalVisitor rationalVisitor = new RationalVisitor();
+			return new ArithmeticConstant(ctx.rational().accept(rationalVisitor));
+		}
+		
+		@Override
+		public ArithmeticConstant visitAconstAny(SCHIMPFunctionModelParser.AconstAnyContext ctx) {
+			return null;
+		}
+	}
+	
+	private static class RationalVisitor extends SCHIMPFunctionModelBaseVisitor<Fraction> {
+		@Override
+		public Fraction visitRationalParens(SCHIMPFunctionModelParser.RationalParensContext ctx) {
+			RationalVisitor rationalVisitor = new RationalVisitor();
+			
+			Fraction aconst = ctx.rational().accept(rationalVisitor);
+			return aconst;
+		}
+		
+		@Override
+		public Fraction visitRationalMultiply(SCHIMPFunctionModelParser.RationalMultiplyContext ctx) {
+			RationalVisitor rationalVisitor = new RationalVisitor();
+			
+			Fraction left = ctx.rational(0).accept(rationalVisitor);
+			Fraction right = ctx.rational(1).accept(rationalVisitor);
+			
+			return left.multiply(right);
+		}
+		
+		@Override
+		public Fraction visitRationalDivide(SCHIMPFunctionModelParser.RationalDivideContext ctx) {
+			RationalVisitor rationalVisitor = new RationalVisitor();
+			
+			Fraction left = ctx.rational(0).accept(rationalVisitor);
+			Fraction right = ctx.rational(1).accept(rationalVisitor);
+			
+			return left.divide(right);
+		}
+		
+		@Override
+		public Fraction visitRationalAdd(SCHIMPFunctionModelParser.RationalAddContext ctx) {
+			RationalVisitor rationalVisitor = new RationalVisitor();
+			
+			Fraction left = ctx.rational(0).accept(rationalVisitor);
+			Fraction right = ctx.rational(1).accept(rationalVisitor);
+			
+			return left.add(right);
+		}
+		
+		@Override
+		public Fraction visitRationalSubtract(SCHIMPFunctionModelParser.RationalSubtractContext ctx) {
+			RationalVisitor rationalVisitor = new RationalVisitor();
+			
+			Fraction left = ctx.rational(0).accept(rationalVisitor);
+			Fraction right = ctx.rational(1).accept(rationalVisitor);
+			
+			return left.subtract(right);
+		}
+		
+		@Override
+		public Fraction visitRationalInteger(SCHIMPFunctionModelParser.RationalIntegerContext ctx) {
+			// TODO: this must be an integer, throw exception if not
+			return new Fraction(Integer.parseInt(ctx.getText()));
 		}
 	}
 	

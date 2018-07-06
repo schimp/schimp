@@ -31,7 +31,7 @@ aexp : '(' aexp ')'    # AexpParens
      | aexp 'mod' aexp # AexpModulo
      | aexp 'xor' aexp # AexpXor
      | IDENTIFIER      # AexpVarname
-     | NUMBER          # AexpConst
+     | INTEGER         # AexpConst
      ;
 
 // boolean expressions
@@ -46,10 +46,10 @@ bexp : '(' bexp ')'             # BexpParens
      ;
 
 // probability mass functions
-pmf : '{' aexp '->' NUMBER (',' aexp '->' NUMBER)* '}' ;
+pmf : '{' aexp '->' aexp (',' aexp '->' aexp)* '}' ;
 
-// floating-point numbers/integers
-NUMBER : ('-')? [0-9]+ ('.' [0-9]+)? ;
+// integers
+INTEGER : ('-')? [0-9]+ ;
 
 // booleans
 BOOLEAN : 'true'
