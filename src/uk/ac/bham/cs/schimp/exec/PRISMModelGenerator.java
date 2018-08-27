@@ -2,6 +2,7 @@ package uk.ac.bham.cs.schimp.exec;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -10,6 +11,7 @@ import java.util.Map;
 
 import org.javatuples.Pair;
 
+import explicit.graphviz.Decorator;
 import parser.State;
 import parser.Values;
 import parser.VarList;
@@ -24,7 +26,9 @@ import prism.Prism;
 import prism.PrismException;
 import prism.PrismFileLog;
 import prism.PrismLangException;
+import prism.PrismLog;
 import uk.ac.bham.cs.schimp.ProbabilityMassFunction;
+import uk.ac.bham.cs.schimp.exec.graphviz.StateDecorator;
 import uk.ac.bham.cs.schimp.lang.Program;
 import uk.ac.bham.cs.schimp.source.FunctionModelSourceFile;
 import uk.ac.bham.cs.schimp.source.SourceFile;
@@ -48,7 +52,7 @@ public class PRISMModelGenerator implements ModelGenerator {
 	
 	// the prism State object that is currently being explored
 	private State exploringState;
-	//private ProgramExecutionContext executingContext;
+	private ProgramExecutionContext executingContext;
 	//private int exploringStateID;
 	
 	private State[] succeedingStates;
@@ -63,9 +67,17 @@ public class PRISMModelGenerator implements ModelGenerator {
 	private static List<String> prismVarNames = Arrays.asList("id");
 	private static List<Type> prismVarTypes = Arrays.asList(TypeInt.getInstance());
 	
+	private static List<String> prismLabelNames = Arrays.asList("", "⊥");
+	
+	//==========================================================================
+	
 	public PRISMModelGenerator(Program program, boolean collapseDeterministicTransitions) {
 		this.program = program;
 		this.collapseDeterministicTransitions = collapseDeterministicTransitions;
+	}
+	
+	public ProgramExecutionContext getSCHIMPExecutionContext(int i) {
+		return schimpExecutionContexts.get(i);
 	}
 	
 	//==========================================================================
@@ -136,35 +148,48 @@ public class PRISMModelGenerator implements ModelGenerator {
 	}
 	
 	//==========================================================================
-	// we don't currently use labels
+	// labels are used to identify terminating ProgramExecutionContext objects for prism's use:
+	// - "": this ProgramExecutionContext does not represent a terminating state in the schimp program
+	// - "⊥": this ProgramExecutionContext represents a terminating state in the schimp program
 	
 	@Override
 	public int getNumLabels() {
-		return 0;
+		return prismLabelNames.size();
 	}
 	
 	@Override
 	public List<String> getLabelNames() {
-		return Collections.<String>emptyList();
+		return prismLabelNames;
 	}
 	
 	@Override
 	public int getLabelIndex(String name) {
-		return -1;
+		return prismLabelNames.indexOf(name);
 	}
 
 	@Override
 	public String getLabelName(int i) throws PrismException {
-		throw new PrismException("Label number \"" + i + "\" not defined");
+		try {
+			return prismLabelNames.get(i);
+		} catch (IndexOutOfBoundsException e) {
+			throw new PrismException("Label number \"" + i + "\" not defined");
+		}
 	}
 	
 	@Override
-	public boolean isLabelTrue(String label) throws PrismException {
-		throw new PrismException("Label \"" + label + "\" not defined");
+	public boolean isLabelTrue(String name) throws PrismException {
+		return isLabelTrue(getLabelIndex(name));
 	}
 
 	@Override
 	public boolean isLabelTrue(int i) throws PrismException {
+		switch (i) {
+			case 0: // ""
+				return !executingContext.isTerminating();
+			case 1: // "⊥"
+				return executingContext.isTerminating();
+		}
+		
 		throw new PrismException("Label number \"" + i + "\" not defined");
 	}
 	
@@ -199,7 +224,7 @@ public class PRISMModelGenerator implements ModelGenerator {
 		exploringState = exploreState;
 		int exploringStateID = (int)exploreState.varValues[0];
 		//System.out.println("exploreState: " + exploringStateID);
-		ProgramExecutionContext executingContext = schimpExecutionContexts.get(exploringStateID);
+		executingContext = schimpExecutionContexts.get(exploringStateID);
 		//System.out.println(executingContext.toString());
 		
 		// execute the next command in the ProgramExecutionContext to discover the probability distribution over its
@@ -239,7 +264,7 @@ public class PRISMModelGenerator implements ModelGenerator {
 			// now that this State has been explored and its succeeding states can be mapped, its corresponding
 			// ProgramExecutionContext object isn't needed any more - remove it from schimpExecutionContexts to free up
 			// some memory
-			schimpExecutionContexts.remove(exploringStateID);
+			//schimpExecutionContexts.remove(exploringStateID);
 		}
 		
 		// assign a prism State object to each succeeding ProgramExecutionContext; if a particular
@@ -383,13 +408,20 @@ public class PRISMModelGenerator implements ModelGenerator {
 			Program p = source.parse(functionModels);
 			System.out.println(p.toString());
 			
-			Prism prism = new Prism(new PrismFileLog("stdout"));
+			PrismLog prismStdout = new PrismFileLog("stdout");
+			Prism prism = new Prism(prismStdout);
 			prism.initialise();
 			prism.setEngine(Prism.EXPLICIT);
 			
 			PRISMModelGenerator modelGenerator = new PRISMModelGenerator(p, false);
 			prism.loadModelGenerator(modelGenerator);
-			prism.exportTransToFile(true, Prism.EXPORT_DOT_STATES, new File(args[0] + ".dot"));
+			prism.buildModelIfRequired();
+			
+			//prism.exportTransToFile(false, Prism.EXPORT_DOT_STATES, new File(args[0] + ".dot"));
+			ArrayList<Decorator> decorators = new ArrayList<Decorator>();
+			decorators.add(new StateDecorator(prism.getBuiltModelExplicit().getStatesList(), modelGenerator));
+			PrismLog dotFile = new PrismFileLog(args[0] + ".dot");
+			prism.getBuiltModelExplicit().exportToDotFile(dotFile, decorators);
 		} catch (IOException e) {
 			// TODO: handle this correctly
 			e.printStackTrace();
