@@ -6,6 +6,7 @@ import explicit.graphviz.Decoration;
 import explicit.graphviz.Decorator;
 import parser.State;
 import uk.ac.bham.cs.schimp.exec.PRISMModelGenerator;
+import uk.ac.bham.cs.schimp.exec.ProgramExecutionContext;
 
 public class StateDecorator implements Decorator {
 	
@@ -20,12 +21,18 @@ public class StateDecorator implements Decorator {
 	public Decoration decorateState(int state, Decoration d) {
 		State prismState = stateList.get(state);
 		int schimpExecutionContextID = (int)prismState.varValues[0];
+		ProgramExecutionContext context = modelGenerator.getSCHIMPExecutionContext(schimpExecutionContextID);
 		
-		// set the label for this node to be the unique SCHIMPExecutionContext id
-		d.setLabel(String.valueOf(schimpExecutionContextID));
+		// set the label for this node to contain:
+		d.setLabel(
+			// - the unique SCHIMPExecutionContext id
+			String.valueOf(schimpExecutionContextID) + "\n" +
+			// - the elapsed time and power consumption by the time this SCHIMPExecutionContext is reached
+			"◷ " + context.elapsedTime + "  ⚡ " + context.totalPowerConsumption
+		);
 		
 		// give prism States representing terminating SCHIMPExecutionContexts a double outline
-		if (modelGenerator.getSCHIMPExecutionContext(schimpExecutionContextID).isTerminating()) {
+		if (context.isTerminating()) {
 			d.attributes().put("peripheries", "2");
 		}
 		
