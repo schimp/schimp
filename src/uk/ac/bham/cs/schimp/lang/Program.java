@@ -56,6 +56,12 @@ public class Program extends Block {
 		return commandTable;
 	}
 	
+	public List<String> getInitialVariableNames() {
+		return initialCommands.stream()
+			.map(i -> i.getVariableReference().getName())
+			.collect(Collectors.toList());
+	}
+	
 	@Override
 	public void check(SyntaxCheckContext context) throws SyntaxException {
 		context.program = this;

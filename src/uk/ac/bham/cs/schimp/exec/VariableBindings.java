@@ -107,6 +107,16 @@ public class VariableBindings implements Cloneable {
 		}
 	}
 	
+	public ArithmeticConstant evaluateInitial(String variableName) throws ProgramExecutionException {
+		try {
+			return scopeFrames
+				.get(scopeFrames.size() - 1) // initial variables are always declared in the global scope frame
+				.evaluate(variableName);
+		} catch (NoSuchElementException e) {
+			throw new ProgramExecutionException("cannot evaluate initial variable '" + variableName + "': variable is undefined here");
+		}
+	}
+	
 	public ArithmeticConstant evaluate(String variableName) throws ProgramExecutionException {
 		try {
 			return currentScope.stream()

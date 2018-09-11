@@ -34,6 +34,10 @@ public class InitialCommand extends Command {
 		pmf.add(exp, new ArithmeticConstant(1));
 	}
 	
+	public VariableReference getVariableReference() {
+		return v;
+	}
+	
 	@Override
 	public void check(SyntaxCheckContext context) throws SyntaxException {
 		super.check(context);
