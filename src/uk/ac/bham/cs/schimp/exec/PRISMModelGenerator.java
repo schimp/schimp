@@ -401,15 +401,15 @@ public class PRISMModelGenerator implements ModelGenerator {
 		// in this ProgramExecutionContext
 		if (prismStateHasPower) state.setValue(nextIndex++, context.totalPowerConsumption);
 		
-		// the remaining variables in the State are the current values of the initial variables in this
-		// ProgramExecutionContext in the order in which they are declared in the program
+		// the remaining variables in the State are the values of the initial variables in this ProgramExecutionContext
+		// at the point at which they were declared, in the order in which they are declared in the program
 		for (int i = nextIndex; i < prismVarNames.size(); i++) {
 			try {
-				state.setValue(i, context.variableBindings.evaluateInitial(prismVarNames.get(i)).toFraction().intValue());
+				state.setValue(i, context.initialVariableBindings.evaluate(prismVarNames.get(i)).toFraction().intValue());
 			} catch (ProgramExecutionException e) {
-				// evaluateInitial() throws a ProgramExecutionException if the given string is not a defined initial
-				// variable name - in this case, set the current value of this variable to Integer.MIN_VALUE, indicating
-				// that the variable is undefined at this point
+				// evaluate() throws a ProgramExecutionException if the given string is not a defined variable name - in
+				// this case, set the value of this variable to Integer.MIN_VALUE, indicating that the variable is
+				// undefined at this point
 				state.setValue(i, Integer.MIN_VALUE);
 			}
 		}
@@ -529,7 +529,7 @@ public class PRISMModelGenerator implements ModelGenerator {
 			prism.initialise();
 			prism.setEngine(Prism.EXPLICIT);
 			
-			PRISMModelGenerator modelGenerator = new PRISMModelGenerator(p, true, true, false);
+			PRISMModelGenerator modelGenerator = new PRISMModelGenerator(p, true, true, true);
 			prism.loadModelGenerator(modelGenerator);
 			prism.buildModelIfRequired();
 			
