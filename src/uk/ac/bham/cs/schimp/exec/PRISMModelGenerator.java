@@ -42,6 +42,9 @@ public class PRISMModelGenerator implements ModelGenerator {
 	// the schimp program being executed by this model generator 
 	private Program program;
 	
+	// the names of the initial variables whose values should be tracked in prism State objects
+	private List<String> trackedInitialVariables;
+	
 	// if set to true, cumulative elapsed time and consumed power respectively are stored as variables in the prism
 	// State object as well as in reward structures
 	private boolean prismStateHasTime = false;
@@ -72,22 +75,21 @@ public class PRISMModelGenerator implements ModelGenerator {
 	// the probability distribution over the ProgramExecutionStates that succeed the one currently being executed
 	//private ProbabilityMassFunction<ProgramExecutionContext> succeedingContexts;
 	
-	// the names of the variables defined in each prism State object - these are the unique id representing the State
-	// object followed by the schimp Program's initial variables in the order in which they are declared
+	// the names of the variables defined in each prism State object
 	private List<String> prismVarNames = new ArrayList<String>();
 	
-	// the types of the variables defined in each prism State object - one integer (representing the State's unique id)
-	// followed by one integer per initial variable declared in the schimp Program
+	// the types of the variables defined in each prism State object
 	private List<Type> prismVarTypes;
 	
 	private static List<String> prismLabelNames = Arrays.asList("terminate");
 	
 	//==========================================================================
 	
-	public PRISMModelGenerator(Program program, boolean prismStateHasTime, boolean prismStateHasPower, boolean collapseDeterministicTransitions) {
+	public PRISMModelGenerator(Program program, boolean prismStateHasTime, boolean prismStateHasPower, List<String> trackedInitialVariables, boolean collapseDeterministicTransitions) {
 		this.program = program;
 		this.prismStateHasTime = prismStateHasTime;
 		this.prismStateHasPower = prismStateHasPower;
+		this.trackedInitialVariables = trackedInitialVariables;
 		this.collapseDeterministicTransitions = collapseDeterministicTransitions;
 		
 		// the names of the variables defined in each prism State object are:
@@ -97,8 +99,8 @@ public class PRISMModelGenerator implements ModelGenerator {
 		if (prismStateHasTime) prismVarNames.add("[time]");
 		// - the cumulative power consumption (if prismStateHasPower is true)
 		if (prismStateHasPower) prismVarNames.add("[power]");
-		// - the schimp Program's initial variables in the order in which they are declared
-		prismVarNames.addAll(program.getInitialVariableNames());
+		// - the schimp Program's initial variables that should be tracked
+		prismVarNames.addAll(trackedInitialVariables);
 		
 		// the types of the variables defined in each prism State object are all integers
 		prismVarTypes = prismVarNames.stream()
@@ -119,10 +121,7 @@ public class PRISMModelGenerator implements ModelGenerator {
 	}
 	
 	public List<String> getInitialVariableNames() {
-		int firstVariableIndex = 1;
-		if (prismStateHasTime) firstVariableIndex++;
-		if (prismStateHasPower) firstVariableIndex++;
-		return prismVarNames.subList(firstVariableIndex, prismVarNames.size());
+		return trackedInitialVariables;
 	}
 	
 	//==========================================================================
@@ -529,7 +528,7 @@ public class PRISMModelGenerator implements ModelGenerator {
 			prism.initialise();
 			prism.setEngine(Prism.EXPLICIT);
 			
-			PRISMModelGenerator modelGenerator = new PRISMModelGenerator(p, true, true, true);
+			PRISMModelGenerator modelGenerator = new PRISMModelGenerator(p, true, true, null, true);
 			prism.loadModelGenerator(modelGenerator);
 			prism.buildModelIfRequired();
 			
