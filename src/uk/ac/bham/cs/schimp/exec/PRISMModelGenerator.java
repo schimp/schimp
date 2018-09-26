@@ -91,8 +91,8 @@ public class PRISMModelGenerator implements ModelGenerator {
 		this.collapseDeterministicTransitions = collapseDeterministicTransitions;
 		
 		// the names of the variables defined in each prism State object are:
-		// - the unique id representing the State object
-		prismVarNames.add("[stateid]");
+		// - the unique id representing the ProgramExecutionContext associated with this State
+		prismVarNames.add("[cid]");
 		// - the cumulative elapsed time (if prismStateHasTime is true)
 		if (prismStateHasTime) prismVarNames.add("[time]");
 		// - the cumulative power consumption (if prismStateHasPower is true)
@@ -173,7 +173,7 @@ public class PRISMModelGenerator implements ModelGenerator {
 		try {
 			int firstVariableIndex = 1;
 			
-			varList.addVar(new Declaration("[stateid]", new DeclarationInt(Expression.Int(1), Expression.Int(Integer.MAX_VALUE))), 0, null);
+			varList.addVar(new Declaration("[cid]", new DeclarationInt(Expression.Int(1), Expression.Int(Integer.MAX_VALUE))), 0, null);
 			
 			if (prismStateHasTime) {
 				varList.addVar(new Declaration("[time]", new DeclarationInt(Expression.Int(0), Expression.Int(Integer.MAX_VALUE))), 0, null);
