@@ -61,6 +61,9 @@ public class PRISMModelGenerator implements ModelGenerator {
 	// the last allocated id for representing prism State objects in schimpExecutionContexts
 	private int lastStateID = 0;
 	
+	private int lastOutputHashID = 0;
+	private Map<String, Integer> schimpExecutionContextOutputHashes = new HashMap<>();
+	
 	// the prism State object that is currently being explored
 	private State exploringState;
 	private ProgramExecutionContext executingContext;
@@ -99,6 +102,8 @@ public class PRISMModelGenerator implements ModelGenerator {
 		if (prismStateHasTime) prismVarNames.add("[time]");
 		// - the cumulative power consumption (if prismStateHasPower is true)
 		if (prismStateHasPower) prismVarNames.add("[power]");
+		// - a hash of the outputs observed so far from the schimp Program
+		prismVarNames.add("[outputs]");
 		// - the schimp Program's initial variables that should be tracked
 		prismVarNames.addAll(trackedInitialVariables);
 		
@@ -170,7 +175,7 @@ public class PRISMModelGenerator implements ModelGenerator {
 	public VarList createVarList() {
 		VarList varList = new VarList();
 		try {
-			int firstVariableIndex = 1;
+			int firstVariableIndex = 2;
 			
 			varList.addVar(new Declaration("[cid]", new DeclarationInt(Expression.Int(1), Expression.Int(Integer.MAX_VALUE))), 0, null);
 			
@@ -183,6 +188,8 @@ public class PRISMModelGenerator implements ModelGenerator {
 				varList.addVar(new Declaration("[power]", new DeclarationInt(Expression.Int(0), Expression.Int(Integer.MAX_VALUE))), 0, null);
 				firstVariableIndex++;
 			}
+			
+			varList.addVar(new Declaration("[outputs]", new DeclarationInt(Expression.Int(1), Expression.Int(Integer.MAX_VALUE))), 0, null);
 			
 			for (int i = firstVariableIndex; i < prismVarNames.size(); i++) {
 				varList.addVar(new Declaration(prismVarNames.get(i), new DeclarationInt(Expression.Int(Integer.MIN_VALUE), Expression.Int(Integer.MAX_VALUE))), 0, null);
@@ -400,6 +407,10 @@ public class PRISMModelGenerator implements ModelGenerator {
 		// in this ProgramExecutionContext
 		if (prismStateHasPower) state.setValue(nextIndex++, context.totalPowerConsumption);
 		
+		// the next variable is a unique id representing the particular lists of outputs that have been produced in this
+		// ProgramExecutionContext
+		state.setValue(nextIndex++, getOutputsID(context.outputsToString()));
+		
 		// the remaining variables in the State are the values of the initial variables in this ProgramExecutionContext
 		// at the point at which they were declared, in the order in which they are declared in the program
 		for (int i = nextIndex; i < prismVarNames.size(); i++) {
@@ -414,6 +425,15 @@ public class PRISMModelGenerator implements ModelGenerator {
 		}
 		
 		return state;
+	}
+	
+	private int getOutputsID(String outputsList) {
+		if (schimpExecutionContextOutputHashes.containsKey(outputsList)) {
+			return schimpExecutionContextOutputHashes.get(outputsList);
+		} else {
+			schimpExecutionContextOutputHashes.put(outputsList, ++lastOutputHashID);
+			return lastOutputHashID;
+		}
 	}
 
 	@Override

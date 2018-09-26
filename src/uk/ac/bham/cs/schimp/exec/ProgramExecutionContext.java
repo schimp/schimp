@@ -88,6 +88,17 @@ public class ProgramExecutionContext implements Cloneable {
 		return DigestUtils.md5Hex(toString());
 	}
 	
+	public String outputsToString() {
+		return outputs.keySet().stream()
+			.map(t ->
+				t + "=[" +
+				outputs.get(t).stream()
+					.map(ac -> ac.toSourceString())
+					.collect(Collectors.joining(",")) +
+				"]")
+			.collect(Collectors.joining(","));
+	}
+	
 	@Override
 	public String toString() {
 		return this.toString(0);
