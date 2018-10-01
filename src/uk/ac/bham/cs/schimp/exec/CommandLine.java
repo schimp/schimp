@@ -72,7 +72,6 @@ public class CommandLine {
 		}
 		System.out.println(program.toString());
 		
-		// TODO: parse -I
 		List<String> requestedInitialVariables = options.valuesOf("initial-vars").stream()
 			.map(v -> v.toString())
 			.collect(Collectors.toList());
