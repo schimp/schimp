@@ -3,6 +3,7 @@ package uk.ac.bham.cs.schimp.lang.expression.arith;
 import org.apache.commons.math3.fraction.Fraction;
 
 import uk.ac.bham.cs.schimp.exec.ProgramExecutionContext;
+import uk.ac.bham.cs.schimp.exec.VariableScopeFrame;
 import uk.ac.bham.cs.schimp.source.SyntaxCheckContext;
 import uk.ac.bham.cs.schimp.source.SyntaxException;
 
@@ -25,6 +26,11 @@ public class ArithmeticConstant extends ArithmeticExpression {
 	
 	@Override
 	public ArithmeticConstant evaluate(ProgramExecutionContext context) {
+		return this;
+	}
+	
+	@Override
+	public ArithmeticConstant evaluate(VariableScopeFrame frame) {
 		return this;
 	}
 	

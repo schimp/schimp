@@ -16,7 +16,7 @@ import uk.ac.bham.cs.schimp.lang.expression.arith.VariableReference;
 import uk.ac.bham.cs.schimp.source.SyntaxCheckContext;
 import uk.ac.bham.cs.schimp.source.SyntaxException;
 
-public class InitialCommand extends Command {
+public class InitialCommand extends VariableAssignmentCommand {
 	
 	private VariableReference v;
 	private ArithmeticExpressionProbabilityMassFunction pmf;
@@ -34,8 +34,14 @@ public class InitialCommand extends Command {
 		pmf.add(exp, new ArithmeticConstant(1));
 	}
 	
+	@Override
 	public VariableReference getVariableReference() {
 		return v;
+	}
+	
+	@Override
+	public ArithmeticExpressionProbabilityMassFunction getArithmeticExpressionProbabilityMassFunction() {
+		return pmf;
 	}
 	
 	@Override

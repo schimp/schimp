@@ -3,6 +3,7 @@ package uk.ac.bham.cs.schimp.lang.expression.arith;
 import uk.ac.bham.cs.schimp.exec.EvaluationException;
 import uk.ac.bham.cs.schimp.exec.ProgramExecutionContext;
 import uk.ac.bham.cs.schimp.exec.ProgramExecutionException;
+import uk.ac.bham.cs.schimp.exec.VariableScopeFrame;
 import uk.ac.bham.cs.schimp.source.SyntaxCheckContext;
 import uk.ac.bham.cs.schimp.source.SyntaxException;
 
@@ -31,6 +32,17 @@ public class VariableReference extends ArithmeticExpression {
 	public ArithmeticConstant evaluate(ProgramExecutionContext context) throws EvaluationException {
 		try {
 			return context.variableBindings.evaluate(name);
+		} catch (ProgramExecutionException e) {
+			// this should never happen: if the syntax-checking phase succeeds, it guarantees that variables are always
+			// in scope
+			throw new EvaluationException("variable '" + name + "' cannot be evaluated here");
+		}
+	}
+	
+	@Override
+	public ArithmeticConstant evaluate(VariableScopeFrame frame) throws EvaluationException {
+		try {
+			return frame.evaluate(name);
 		} catch (ProgramExecutionException e) {
 			// this should never happen: if the syntax-checking phase succeeds, it guarantees that variables are always
 			// in scope

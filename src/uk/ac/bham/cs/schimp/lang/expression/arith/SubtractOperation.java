@@ -2,6 +2,7 @@ package uk.ac.bham.cs.schimp.lang.expression.arith;
 
 import uk.ac.bham.cs.schimp.exec.EvaluationException;
 import uk.ac.bham.cs.schimp.exec.ProgramExecutionContext;
+import uk.ac.bham.cs.schimp.exec.VariableScopeFrame;
 import uk.ac.bham.cs.schimp.source.SyntaxCheckContext;
 import uk.ac.bham.cs.schimp.source.SyntaxException;
 
@@ -25,6 +26,11 @@ public class SubtractOperation extends ArithmeticExpression {
 	@Override
 	public ArithmeticConstant evaluate(ProgramExecutionContext context) throws EvaluationException {
 		return new ArithmeticConstant(left.evaluate(context).toFraction().subtract(right.evaluate(context).toFraction()));
+	}
+	
+	@Override
+	public ArithmeticConstant evaluate(VariableScopeFrame frame) throws EvaluationException {
+		return new ArithmeticConstant(left.evaluate(frame).toFraction().subtract(right.evaluate(frame).toFraction()));
 	}
 	
 	public String toString(int indent) {

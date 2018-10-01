@@ -1,20 +1,14 @@
 package uk.ac.bham.cs.schimp.exec;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import org.javatuples.Pair;
-
-import explicit.graphviz.Decorator;
 import parser.State;
 import parser.Values;
 import parser.VarList;
@@ -25,126 +19,172 @@ import parser.type.Type;
 import parser.type.TypeInt;
 import prism.ModelGenerator;
 import prism.ModelType;
-import prism.Prism;
 import prism.PrismException;
-import prism.PrismFileLog;
 import prism.PrismLangException;
-import prism.PrismLog;
 import uk.ac.bham.cs.schimp.ProbabilityMassFunction;
-import uk.ac.bham.cs.schimp.exec.graphviz.StateDecorator;
 import uk.ac.bham.cs.schimp.lang.Program;
-import uk.ac.bham.cs.schimp.source.FunctionModelSourceFile;
-import uk.ac.bham.cs.schimp.source.SourceFile;
-import uk.ac.bham.cs.schimp.source.SyntaxException;
 
 public class PRISMModelGenerator implements ModelGenerator {
+	
+	// the execution phase of a particular schimp program, designed for storage in a variable in prism State objects:
+	public enum Phase {
+		// 1: the schimp program is executing
+		PROGRAM_EXECUTING,
+		// 2: the schimp program has terminated
+		PROGRAM_TERMINATED,
+		// 3: the attacker has guessed values for the tracked initial variables
+		ATTACKER_GUESSED
+	}
+	
+	public static final EnumMap<Phase, Integer> PHASE_IDS = new EnumMap<>(Phase.class);
+	static {
+		PHASE_IDS.put(Phase.PROGRAM_EXECUTING, 1);
+		PHASE_IDS.put(Phase.PROGRAM_TERMINATED, 2);
+		PHASE_IDS.put(Phase.ATTACKER_GUESSED, 3);
+	}
+	
+	//==========================================================================
 	
 	// the schimp program being executed by this model generator 
 	private Program program;
 	
-	// the names of the initial variables whose values should be tracked in prism State objects
-	private List<String> trackedInitialVariables;
-	
 	// if set to true, cumulative elapsed time and consumed power respectively are stored as variables in the prism
 	// State object as well as in reward structures
-	private boolean prismStateHasTime = false;
-	private boolean prismStateHasPower = false;
+	private boolean stateTime = false;
+	private boolean statePower = false;
+	
+	// the names of the initial variables whose values should be tracked in prism State objects
+	private List<String> stateInitialVars;
+	private int stateInitialVarsOffset = 3;
 	
 	// if set to true, deterministic transitions between states are not represented in the generated model
 	private boolean collapseDeterministicTransitions;
 	
-	// a Map from ids representing unique prism State objects to corresponding schimp ProgramExecutionContext objects
+	// a map from ids to unique schimp ProgramExecutionContext objects
 	private Map<Integer, ProgramExecutionContext> schimpExecutionContexts = new HashMap<>();
-	
+	private int lastContextID = 0;
+	// a reverse map for schimpExecutionContexts, but based on (much shorter) hashes of ProgramExecutionContext strings
 	private Map<String, Integer> schimpExecutionContextHashes = new HashMap<>();
 	
-	// the last allocated id for representing prism State objects in schimpExecutionContexts
-	private int lastStateID = 0;
-	
-	private int lastOutputHashID = 0;
-	private Map<String, Integer> schimpExecutionContextOutputHashes = new HashMap<>();
+	// a map from unique (stringified) lists of schimp program outputs to ids
+	private Map<String, Integer> schimpExecutionContextOutputLists = new HashMap<>();
+	private int lastOutputListID = 0;
 	
 	// the prism State object that is currently being explored
 	private State exploringState;
-	private ProgramExecutionContext executingContext;
-	//private int exploringStateID;
 	
+	// various information relating to the State objects that succeed the one currently being explored
 	private State[] succeedingStates;
 	private double[] succeedingStateProbabilities;
+	private int succeedingChoices;
+	private int succeedingTransitions;
 	
 	private Map<Integer, Integer> stateTimeConsumptions = new HashMap<>();
 	private Map<Integer, Integer> statePowerConsumptions = new HashMap<>();
 	
-	// the probability distribution over the ProgramExecutionStates that succeed the one currently being executed
-	//private ProbabilityMassFunction<ProgramExecutionContext> succeedingContexts;
-	
 	// the names of the variables defined in each prism State object
 	private List<String> prismVarNames = new ArrayList<String>();
+	
+	// the names of the observable variables defined in each prism State object (a subset of prismVarNames)
+	private List<String> prismObservableVarNames = new ArrayList<String>();
 	
 	// the types of the variables defined in each prism State object
 	private List<Type> prismVarTypes;
 	
-	private static List<String> prismLabelNames = Arrays.asList("terminate");
+	private State emptyAttackerGuessedState;
+	
+	// a cartesian product iterator for the possible values of initial variables recorded in prism State objects
+	private VariableValueCartesianProduct varValueProduct;
 	
 	//==========================================================================
 	
-	public PRISMModelGenerator(Program program, boolean prismStateHasTime, boolean prismStateHasPower, List<String> trackedInitialVariables, boolean collapseDeterministicTransitions) {
+	public PRISMModelGenerator(Program program, boolean stateTime, boolean statePower, List<String> stateInitialVars, boolean collapseDeterministicTransitions) {
 		this.program = program;
-		this.prismStateHasTime = prismStateHasTime;
-		this.prismStateHasPower = prismStateHasPower;
-		this.trackedInitialVariables = trackedInitialVariables;
+		this.stateTime = stateTime;
+		this.statePower = statePower;
+		this.stateInitialVars = stateInitialVars;
 		this.collapseDeterministicTransitions = collapseDeterministicTransitions;
+		
+		varValueProduct = new VariableValueCartesianProduct(
+			program.getInitialCommands().stream()
+				.filter(c -> stateInitialVars.indexOf(c.getVariableReference().getName()) != -1)
+				.collect(Collectors.toList())
+		);
 		
 		// the names of the variables defined in each prism State object are:
 		// - the unique id representing the ProgramExecutionContext associated with this State
 		prismVarNames.add("[cid]");
-		// - the cumulative elapsed time (if prismStateHasTime is true)
-		if (prismStateHasTime) prismVarNames.add("[time]");
-		// - the cumulative power consumption (if prismStateHasPower is true)
-		if (prismStateHasPower) prismVarNames.add("[power]");
-		// - a hash of the outputs observed so far from the schimp Program
-		prismVarNames.add("[outputs]");
-		// - the schimp Program's initial variables that should be tracked
-		prismVarNames.addAll(trackedInitialVariables);
+		// - the execution phase of the schimp program, by its phase id (see PRISMModelGenerator.Phase)
+		prismVarNames.add("[phase]");
+		prismObservableVarNames.add("[phase]");
+		// - the unique id representing the list of outputs observed so far from the schimp program
+		prismVarNames.add("[oid]");
+		prismObservableVarNames.add("[oid]");
+		// - the cumulative elapsed time of the schimp program (if stateTime is true)
+		if (stateTime) {
+			prismVarNames.add("[time]");
+			prismObservableVarNames.add("[time]");
+			stateInitialVarsOffset++;
+		}
+		// - the cumulative power consumption of the schimp program (if statePower is true)
+		if (statePower) {
+			prismVarNames.add("[power]");
+			prismObservableVarNames.add("[power]");
+			stateInitialVarsOffset++;
+		}
+		// - the names of the schimp program's initial variables to record in the prism state, so they can be included
+		//   in prism property queries
+		prismVarNames.addAll(stateInitialVars);
 		
-		// the types of the variables defined in each prism State object are all integers
+		// these variables are all integers
 		prismVarTypes = prismVarNames.stream()
 			.map(v -> TypeInt.getInstance())
 			.collect(Collectors.toList());
+		
+		emptyAttackerGuessedState = new State(prismVarNames.size());
+		emptyAttackerGuessedState.varValues = new Object[prismVarNames.size()];
+		Arrays.fill(emptyAttackerGuessedState.varValues, -1);
+		emptyAttackerGuessedState.varValues[1] = PHASE_IDS.get(Phase.ATTACKER_GUESSED);
+		System.out.println(emptyAttackerGuessedState.toString());
 	}
 	
-	public boolean prismStateHasTime() {
-		return prismStateHasTime;
+	public boolean stateTime() {
+		return stateTime;
 	}
 	
-	public boolean prismStateHasPower() {
-		return prismStateHasPower;
+	public boolean statePower() {
+		return statePower;
+	}
+	
+	public List<String> stateInitialVariableNames() {
+		return stateInitialVars;
 	}
 	
 	public ProgramExecutionContext getSCHIMPExecutionContext(int i) {
 		return schimpExecutionContexts.get(i);
 	}
 	
-	public List<String> getInitialVariableNames() {
-		return trackedInitialVariables;
-	}
-	
 	//==========================================================================
-	// the execution of schimp programs is modelled as a discrete-time markov chain
+	// the execution of schimp programs is modelled as a partially-observable markov decision process
 	
 	@Override
 	public ModelType getModelType() {
-		return ModelType.DTMC;
+		return ModelType.POMDP;
 	}
 	
 	//==========================================================================
 	// the prism State object representing a schimp program execution contains the following variables (all integers):
-	// - "[state_id]": a unique id that can be used to map back to a more detailed ProgramExecutionContext object
-	//   describing the state of the schimp program in more detail
-	// - one variable representing the current value of each initial variable declared in the schimp program, in the
-	//   order in which the initial variables were declared in the program; the value of an initial variable in the
-	//   prism State object is Integer.MIN_VALUE if the variable has not yet been declared at this point in the schimp
-	//   program
+	// - "[cid]": a unique id that maps to a ProgramExecutionContext object (stored in schimpExecutionContexts)
+	//            describing the state of the schimp program in more detail
+	// - "[phase]": the id representing the execution phase of the schimp program (see PRISMModelGenerator.Phase)
+	// - "[oid]": a unique id representing a (stringified) list of outputs (stored in schimpExecutionContextOutputLists)
+	//            observed so far from the schimp program
+	// - "[time]": the cumulative elapsed time of the schimp program (if stateTime is true)
+	// - "[power]": the cumulative power consumption of the schimp program (if statePower is true)
+	// - "i1".."in": one variable representing the value of each initial variable declared in the schimp program whose
+	//               value is to be recorded in the prism State object, in the order in which the initial variables were
+	//               declared in the schimp program; the value of an initial variable is Integer.MIN_VALUE if it has not
+	//               yet been declared at this point in the schimp program
 	
 	@Override
 	public int getNumVars() {
@@ -161,6 +201,10 @@ public class PRISMModelGenerator implements ModelGenerator {
 		return prismVarTypes;
 	}
 	
+	public List<String> getObservableVars() {
+		return prismObservableVarNames;
+	}
+	
 	@Override
 	public int getVarIndex(String name) {
 		return getVarNames().indexOf(name);
@@ -175,23 +219,12 @@ public class PRISMModelGenerator implements ModelGenerator {
 	public VarList createVarList() {
 		VarList varList = new VarList();
 		try {
-			int firstVariableIndex = 2;
-			
-			varList.addVar(new Declaration("[cid]", new DeclarationInt(Expression.Int(1), Expression.Int(Integer.MAX_VALUE))), 0, null);
-			
-			if (prismStateHasTime) {
-				varList.addVar(new Declaration("[time]", new DeclarationInt(Expression.Int(0), Expression.Int(Integer.MAX_VALUE))), 0, null);
-				firstVariableIndex++;
-			}
-			
-			if (prismStateHasPower) {
-				varList.addVar(new Declaration("[power]", new DeclarationInt(Expression.Int(0), Expression.Int(Integer.MAX_VALUE))), 0, null);
-				firstVariableIndex++;
-			}
-			
-			varList.addVar(new Declaration("[outputs]", new DeclarationInt(Expression.Int(1), Expression.Int(Integer.MAX_VALUE))), 0, null);
-			
-			for (int i = firstVariableIndex; i < prismVarNames.size(); i++) {
+			varList.addVar(new Declaration("[cid]", new DeclarationInt(Expression.Int(-1), Expression.Int(Integer.MAX_VALUE))), 0, null);
+			varList.addVar(new Declaration("[phase]", new DeclarationInt(Expression.Int(1), Expression.Int(PHASE_IDS.size()))), 0, null);
+			varList.addVar(new Declaration("[oid]", new DeclarationInt(Expression.Int(-1), Expression.Int(Integer.MAX_VALUE))), 0, null);
+			if (stateTime) varList.addVar(new Declaration("[time]", new DeclarationInt(Expression.Int(-1), Expression.Int(Integer.MAX_VALUE))), 0, null);
+			if (statePower) varList.addVar(new Declaration("[power]", new DeclarationInt(Expression.Int(-1), Expression.Int(Integer.MAX_VALUE))), 0, null);
+			for (int i = stateInitialVarsOffset; i < prismVarNames.size(); i++) {
 				varList.addVar(new Declaration(prismVarNames.get(i), new DeclarationInt(Expression.Int(Integer.MIN_VALUE), Expression.Int(Integer.MAX_VALUE))), 0, null);
 			}
 		} catch (PrismLangException e) {}
@@ -219,45 +252,35 @@ public class PRISMModelGenerator implements ModelGenerator {
 	}
 	
 	//==========================================================================
-	// labels:
-	// - "terminate": this ProgramExecutionContext represents a terminating state in the schimp program
+	// labels are not used
 	
 	@Override
 	public int getNumLabels() {
-		return prismLabelNames.size();
+		return 0;
 	}
 	
 	@Override
 	public List<String> getLabelNames() {
-		return prismLabelNames;
+		return Collections.<String>emptyList();
 	}
 	
 	@Override
 	public int getLabelIndex(String name) {
-		return prismLabelNames.indexOf(name);
+		return -1;
 	}
 
 	@Override
 	public String getLabelName(int i) throws PrismException {
-		try {
-			return prismLabelNames.get(i);
-		} catch (IndexOutOfBoundsException e) {
-			throw new PrismException("Label number \"" + i + "\" not defined");
-		}
+		throw new PrismException("Label number \"" + i + "\" not defined");
 	}
 	
 	@Override
-	public boolean isLabelTrue(String name) throws PrismException {
-		return isLabelTrue(getLabelIndex(name));
+	public boolean isLabelTrue(String label) throws PrismException {
+		throw new PrismException("Label \"" + label + "\" not defined");
 	}
 
 	@Override
 	public boolean isLabelTrue(int i) throws PrismException {
-		switch (i) {
-			case 0: // "terminate"
-				return executingContext.isTerminating();
-		}
-		
 		throw new PrismException("Label number \"" + i + "\" not defined");
 	}
 	
@@ -272,29 +295,54 @@ public class PRISMModelGenerator implements ModelGenerator {
 	public State getInitialState() throws PrismException {
 		// this method is expected to return a fresh copy of the initial state, so create a new ProgramExecutionContext
 		// object to tie to the prism State object
-		lastStateID++;
-		
-		ProgramExecutionContext context = ProgramExecutionContext.initialContext(program);
-		
-		schimpExecutionContexts.put(lastStateID, context);
-		schimpExecutionContextHashes.put(context.toHash(), lastStateID);
-		
-		return createStateFromProgramExecutionContextID(lastStateID);
+		return createStateFromProgramExecutionContextID(getProgramExecutionContextID(ProgramExecutionContext.initialContext(program)));
 	}
 	
 	@Override
 	public List<State> getInitialStates() throws PrismException {
 		return Collections.singletonList(getInitialState());
 	}
-
+	
+	@Override
+	public State getExploreState() {
+		return exploringState;
+	}
+	
 	@Override
 	public void exploreState(State exploreState) throws PrismException {
-		// get the schimp ProgramExecutionContext associated with this prism State via the id in the prism State
 		exploringState = exploreState;
+		
+		// how this State should be explored depends on what phase the schimp program is in:
+		int phase = (int)exploreState.varValues[1];
+		// - if the program is still executing, find the succeeding ProgramExecutionContexts for the
+		//   ProgramExecutionContext associated with this State and map those ProgramExecutionContexts to State objects
+		if (phase == PHASE_IDS.get(Phase.PROGRAM_EXECUTING)) {
+			exploreExecutingProgramExecutionContext(exploreState);
+		// - if the program has terminated, the succeeding States represent the success of the attacker in
+		//   guessing the value of each initial variable (modelled as non-deterministic choices) - rather than
+		//   precomputing these choices/states and caching them in succeedingStates for later retrieval (as above),
+		//   compute the cartesian product of the possible initial variable values on demand in getChoiceAction(), since
+		//   the possible combinations can be computed quickly by their index (see VariableValueCartesianProduct) and
+		//   precomputing them would potentially consume an enormous amount of memory
+		} else if (phase == PHASE_IDS.get(Phase.PROGRAM_TERMINATED)) {
+			succeedingStates = null;
+			succeedingStateProbabilities = null;
+			succeedingChoices = varValueProduct.size();
+			succeedingTransitions = 1;
+			
+		// - if this State represents the outcome of the attacker guessing the value of each initial variable, there are
+		//   no more states to be explored here; create a self-loop
+		} else {
+			succeedingStates = new State[] { new State(exploreState) };
+			succeedingStateProbabilities = new double[] { 1 };
+			succeedingChoices = 1;
+			succeedingTransitions = 1;
+		}
+	}
+
+	private void exploreExecutingProgramExecutionContext(State exploreState) throws PrismException {
 		int exploringContextID = (int)exploreState.varValues[0];
-		//System.out.println("exploreState: " + exploringStateID);
-		executingContext = schimpExecutionContexts.get(exploringContextID);
-		//System.out.println(executingContext.toString());
+		ProgramExecutionContext exploringContext = schimpExecutionContexts.get(exploringContextID);
 		
 		// discover the probability distribution over the ProgramExecutionContexts succeeding this one - this process
 		// differs depending on whether we need to collapse deterministic transitions between ProgramExecutionContexts:
@@ -305,7 +353,7 @@ public class PRISMModelGenerator implements ModelGenerator {
 		if (collapseDeterministicTransitions) {
 			//int advancedStates = 0;
 			succeedingContexts = new ProbabilityMassFunction<>();
-			succeedingContexts.add(executingContext, 1);
+			succeedingContexts.add(exploringContext, 1);
 			
 			while (succeedingContexts.elements().size() == 1) {
 				ProgramExecutionContext c = succeedingContexts.elements().toArray(new ProgramExecutionContext[1])[0];
@@ -331,51 +379,29 @@ public class PRISMModelGenerator implements ModelGenerator {
 		// - if we don't need to collapse deterministic transitions, discover the succeeding ProgramExecutionContexts by
 		//   executing the next command in the current ProgramExecutionContext
 		} else {
-			if (executingContext.isTerminating()) {
-				//System.out.println("Context ID " + exploringContextID + ": terminating context");
-				
-				// if the schimp program has terminated in this ProgramExecutionContext, its only succeeding
-				// ProgramExecutionContext is itself (i.e. a self-loop)
-				succeedingContexts = new ProbabilityMassFunction<>();
-				succeedingContexts.add(executingContext, 1);
-			} else {
-				//System.out.println("Context ID " + exploringContextID + ": non-terminating context");
-				try {	
-					succeedingContexts = executingContext.executingCommand.execute(executingContext);
-				} catch (ProgramExecutionException e) {
-					// TODO: wrap this properly
-					e.printStackTrace(System.err);
-					throw new PrismException(e.getMessage());
-				}
-				
-				// now that this State has been explored and its succeeding states can be mapped, its corresponding
-				// ProgramExecutionContext object isn't needed any more - remove it from schimpExecutionContexts to free up
-				// some memory
-				//schimpExecutionContexts.remove(exploringStateID);
+			try {
+				succeedingContexts = exploringContext.executingCommand.execute(exploringContext);
+			} catch (ProgramExecutionException e) {
+				// TODO: wrap this properly
+				e.printStackTrace(System.err);
+				throw new PrismException(e.getMessage());
 			}
+			
+			// now that this State has been explored and its succeeding states can be mapped, its corresponding
+			// ProgramExecutionContext object isn't needed any more - remove it from schimpExecutionContexts to free up
+			// some memory
+			//schimpExecutionContexts.remove(exploringStateID);
 		}
 		
 		// create a State from each succeeding ProgramExecutionContext
-		int succeedingStateCount = succeedingContexts.elements().size();
-		succeedingStates = new State[succeedingStateCount];
-		succeedingStateProbabilities = new double[succeedingStateCount];
+		succeedingChoices = 1;
+		succeedingTransitions = succeedingContexts.elements().size();
+		succeedingStates = new State[succeedingTransitions];
+		succeedingStateProbabilities = new double[succeedingTransitions];
 		
 		int index = 0;
 		for (ProgramExecutionContext c : succeedingContexts.elements()) {
-			//System.out.println("Context ID " + exploringContextID + ": succeeding context #" + index + ", p=" + succeedingContexts.probabilityOf(c).doubleValue() + ":");
-			//System.out.println(c.toString());
-			String contextHash = c.toHash();
-			
-			int succeedingContextID;
-			if (schimpExecutionContextHashes.containsKey(contextHash)) {
-				succeedingContextID = schimpExecutionContextHashes.get(contextHash);
-				//System.out.println("Context already seen; reusing context ID " + succeedingContextID);
-			} else {
-				succeedingContextID = ++lastStateID;
-				//System.out.println("New context; assigning context ID " + succeedingContextID);
-				schimpExecutionContexts.put(succeedingContextID, c);
-				schimpExecutionContextHashes.put(contextHash, succeedingContextID);
-			}
+			int succeedingContextID = getProgramExecutionContextID(c);
 			
 			succeedingStates[index] = createStateFromProgramExecutionContextID(succeedingContextID);
 			succeedingStateProbabilities[index] = succeedingContexts.probabilityOf(c).doubleValue();
@@ -383,8 +409,8 @@ public class PRISMModelGenerator implements ModelGenerator {
 			// for the state reward information, store the instantaneous (rather than cumulative) elapsed time and power
 			// consumption (i.e., the time elapsed and power consumed solely as a result of transitioning into this new
 			// state)
-			stateTimeConsumptions.put(succeedingContextID, c.elapsedTime - executingContext.elapsedTime);
-			statePowerConsumptions.put(succeedingContextID, c.totalPowerConsumption - executingContext.totalPowerConsumption);
+			stateTimeConsumptions.put(succeedingContextID, c.elapsedTime - exploringContext.elapsedTime);
+			statePowerConsumptions.put(succeedingContextID, c.totalPowerConsumption - exploringContext.totalPowerConsumption);
 			
 			index++;
 		}
@@ -396,23 +422,17 @@ public class PRISMModelGenerator implements ModelGenerator {
 		State state = new State(prismVarTypes.size());
 		int nextIndex = 0;
 		
-		// the first variable in the State is always the unique id of the ProgramExecutionContext
+		// - "[cid]"
 		state.setValue(nextIndex++, contextID);
-		
-		// if we're required to store time information in the State, the next variable is the cumulative elapsed time in
-		// this ProgramExecutionContext
-		if (prismStateHasTime) state.setValue(nextIndex++, context.elapsedTime);
-		
-		// if we're required to store power information in the State, the next variable is the cumulative consumed power
-		// in this ProgramExecutionContext
-		if (prismStateHasPower) state.setValue(nextIndex++, context.totalPowerConsumption);
-		
-		// the next variable is a unique id representing the particular lists of outputs that have been produced in this
-		// ProgramExecutionContext
+		// - "[phase]" (but never Phase.ATTACKER_GUESSED, as this can't be derived from a ProgramExecutionContext)
+		state.setValue(nextIndex++, context.isTerminating() ? PHASE_IDS.get(Phase.PROGRAM_TERMINATED) :PHASE_IDS.get(Phase.PROGRAM_EXECUTING));
+		// - "[oid]"
 		state.setValue(nextIndex++, getOutputsID(context.outputsToString()));
-		
-		// the remaining variables in the State are the values of the initial variables in this ProgramExecutionContext
-		// at the point at which they were declared, in the order in which they are declared in the program
+		// - "[time]" (if stateTime is true)
+		if (stateTime) state.setValue(nextIndex++, context.elapsedTime);
+		// - "[power]" (if statePower is true)
+		if (statePower) state.setValue(nextIndex++, context.totalPowerConsumption);
+		// - "i1".."in"
 		for (int i = nextIndex; i < prismVarNames.size(); i++) {
 			try {
 				state.setValue(i, context.initialVariableBindings.evaluate(prismVarNames.get(i)).toFraction().intValue());
@@ -427,76 +447,109 @@ public class PRISMModelGenerator implements ModelGenerator {
 		return state;
 	}
 	
-	private int getOutputsID(String outputsList) {
-		if (schimpExecutionContextOutputHashes.containsKey(outputsList)) {
-			return schimpExecutionContextOutputHashes.get(outputsList);
+	private State createStateFromAttackerGuesses(int contextID, VariableScopeFrame guesses) {
+		ProgramExecutionContext context = schimpExecutionContexts.get(contextID);
+		
+		State state = new State(emptyAttackerGuessedState);
+		
+		for (int i = stateInitialVarsOffset; i < prismVarNames.size(); i++) {
+			try {
+				state.setValue(i,
+					guesses.evaluate(prismVarNames.get(i)).toFraction().intValue() == context.initialVariableBindings.evaluate(prismVarNames.get(i)).toFraction().intValue() ?
+					1 : // correct guess for the value of this initial variable
+					0   // incorrect guess for the value of this initial variable
+				);
+			} catch (ProgramExecutionException e) {
+				// evaluate() throws a ProgramExecutionException if the given string is not a defined variable name, but
+				// this should never happen here
+			}
+		}
+		
+		return state;
+	}
+	
+	private int getProgramExecutionContextID(ProgramExecutionContext context) {
+		String contextHash = context.toHash();
+		
+		if (schimpExecutionContextHashes.containsKey(contextHash)) {
+			return schimpExecutionContextHashes.get(contextHash);
 		} else {
-			schimpExecutionContextOutputHashes.put(outputsList, ++lastOutputHashID);
-			return lastOutputHashID;
+			schimpExecutionContexts.put(++lastContextID, context);
+			schimpExecutionContextHashes.put(contextHash, lastContextID);
+			return lastContextID;
 		}
 	}
-
+	
+	private int getOutputsID(String outputsList) {
+		if (schimpExecutionContextOutputLists.containsKey(outputsList)) {
+			return schimpExecutionContextOutputLists.get(outputsList);
+		} else {
+			schimpExecutionContextOutputLists.put(outputsList, ++lastOutputListID);
+			return lastOutputListID;
+		}
+	}
+	
+	//==========================================================================
+	// non-deterministic choice is only used when exploring succeeding states to ones in which the schimp program is in
+	// a terminating ProgramExecutionContext - in this case, the non-deterministic choice is the attacker's guess for
+	// the value of each initial variable recorded in the prism State object, and the action label for each choice is a
+	// stringified VariableScopeFrame representing the attacker's guesses made in that choice
+	
 	@Override
-	public State getExploreState() {
-		return exploringState;
+	public int getNumChoices() throws PrismException {
+		return succeedingChoices;
+	}
+	
+	@Override
+	public Object getChoiceAction(int i) throws PrismException {
+		return (int)exploringState.varValues[1] == PHASE_IDS.get(Phase.PROGRAM_TERMINATED) ?
+			varValueProduct.get(i).toShortString() :
+			null;
 	}
 	
 	//==========================================================================
 	
 	@Override
 	public int getNumTransitions() throws PrismException {
-		return succeedingStates.length;
+		return succeedingTransitions;
 	}
 	
 	@Override
 	public int getNumTransitions(int i) throws PrismException {
-		// the value of i is irrelevant here, as the execution of schimp programs doesn't involve nondeterministic
-		// choice
-		return getNumTransitions();
+		// this has been precomputed in one of the explore methods above, so the value of i has no special significance
+		// here
+		return succeedingTransitions;
 	}
 	
 	@Override
 	public State computeTransitionTarget(int i, int offset) throws PrismException {
-		// the value of i is irrelevant here, as the execution of schimp programs doesn't involve nondeterministic
-		// choice
-		return succeedingStates[offset];
+		return exploringState.varValues[1] == PHASE_IDS.get(Phase.PROGRAM_TERMINATED) ?
+			createStateFromAttackerGuesses((int)exploringState.varValues[0], varValueProduct.get(i)) :
+			succeedingStates[offset];
 	}
 	
 	@Override
 	public double getTransitionProbability(int i, int offset) throws PrismException {
-		// the value of i is irrelevant here, as the execution of schimp programs doesn't involve nondeterministic
-		// choice
-		return succeedingStateProbabilities[offset];
+		return (int)exploringState.varValues[1] == PHASE_IDS.get(Phase.PROGRAM_TERMINATED) ?
+			1.0 :
+			succeedingStateProbabilities[offset];
 	}
 
 	@Override
 	public Object getTransitionAction(int i) throws PrismException {
-		// we don't currently use transition actions
-		return null;
+		return (int)exploringState.varValues[1] == PHASE_IDS.get(Phase.PROGRAM_TERMINATED) ?
+			varValueProduct.get(i).toShortString() :
+			null;
 	}
 
 	@Override
 	public Object getTransitionAction(int i, int offset) throws PrismException {
-		// we don't currently use transition actions
-		return null;
+		return getTransitionAction(i);
 	}
 	
 	//==========================================================================
-	// the execution of schimp programs doesn't involve nondeterministic choice
-	
-	@Override
-	public int getNumChoices() throws PrismException {
-		return 1;
-	}
-	
-	@Override
-	public Object getChoiceAction(int i) throws PrismException {
-		return null;
-	}
-	
-	//==========================================================================
-	// reward structures are used to represent the time and power consumption of schimp programs:
-	// 0 -> time consumption
+	// reward structures are used to represent the elapsed time and power consumption of schimp programs:
+	// 0 -> elapsed time
 	// 1 -> power consumption
 
 	@Override
@@ -520,69 +573,6 @@ public class PRISMModelGenerator implements ModelGenerator {
 		int contextID = (int)state.varValues[0];
 		
 		return r == 0 ? stateTimeConsumptions.get(contextID) : statePowerConsumptions.get(contextID);
-	}
-
-	/*
-	@Override
-	public double getStateActionReward(int r, State state, Object action) throws PrismException {
-		return 0;
-	}
-	*/
-	
-	//==========================================================================
-	
-	public static void main(String[] args) {
-		try {
-			Map<Pair<String, Integer>, FunctionModel> functionModels = null;
-			if (args.length > 1) {
-				FunctionModelSourceFile functionModelSource = new FunctionModelSourceFile(new File(args[1]));
-				functionModels = functionModelSource.parse();
-			}
-			
-			SourceFile source = new SourceFile(new File(args[0]));
-			Program p = source.parse(functionModels);
-			System.out.println(p.toString());
-			
-			PrismLog prismStdout = new PrismFileLog("stdout");
-			Prism prism = new Prism(prismStdout);
-			prism.initialise();
-			prism.setEngine(Prism.EXPLICIT);
-			
-			PRISMModelGenerator modelGenerator = new PRISMModelGenerator(p, true, true, null, true);
-			prism.loadModelGenerator(modelGenerator);
-			prism.buildModelIfRequired();
-			
-			//prism.exportTransToFile(false, Prism.EXPORT_DOT_STATES, new File(args[0] + ".dot"));
-			ArrayList<Decorator> decorators = new ArrayList<Decorator>();
-			decorators.add(new StateDecorator(prism.getBuiltModelExplicit().getStatesList(), modelGenerator));
-			PrismLog dotFile = new PrismFileLog(args[0] + ".dot");
-			prism.getBuiltModelExplicit().exportToDotFile(dotFile, decorators);
-			dotFile.flush();
-			
-			BufferedReader stdinReader = new BufferedReader(new InputStreamReader(System.in));
-			String in;
-			System.out.print( "check> " );
-			while ((in = stdinReader.readLine()) != null) {
-				try {
-					System.out.println(prism.modelCheck(in).getResult());
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
-				System.out.print( "check> " );
-			}
-		} catch (IOException e) {
-			// TODO: handle this correctly
-			e.printStackTrace();
-			System.exit(1);
-		} catch (SyntaxException e) {
-			// TODO: handle this correctly
-			e.printStackTrace();
-			System.exit(1);
-		} catch (PrismException e) {
-			// TODO: handle this correctly
-			e.printStackTrace();
-			System.exit(1);
-		}
 	}
 
 }

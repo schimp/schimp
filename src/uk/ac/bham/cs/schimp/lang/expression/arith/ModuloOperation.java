@@ -4,6 +4,7 @@ import org.apache.commons.math3.fraction.Fraction;
 
 import uk.ac.bham.cs.schimp.exec.EvaluationException;
 import uk.ac.bham.cs.schimp.exec.ProgramExecutionContext;
+import uk.ac.bham.cs.schimp.exec.VariableScopeFrame;
 import uk.ac.bham.cs.schimp.source.SyntaxCheckContext;
 import uk.ac.bham.cs.schimp.source.SyntaxException;
 
@@ -28,6 +29,13 @@ public class ModuloOperation extends ArithmeticExpression {
 	public ArithmeticConstant evaluate(ProgramExecutionContext context) throws EvaluationException {
 		Fraction leftFraction = left.evaluate(context).toFraction();
 		Fraction rightFraction = right.evaluate(context).toFraction();
+		return new ArithmeticConstant(rightFraction.subtract(leftFraction.divide(rightFraction).intValue()));
+	}
+	
+	@Override
+	public ArithmeticConstant evaluate(VariableScopeFrame frame) throws EvaluationException {
+		Fraction leftFraction = left.evaluate(frame).toFraction();
+		Fraction rightFraction = right.evaluate(frame).toFraction();
 		return new ArithmeticConstant(rightFraction.subtract(leftFraction.divide(rightFraction).intValue()));
 	}
 	

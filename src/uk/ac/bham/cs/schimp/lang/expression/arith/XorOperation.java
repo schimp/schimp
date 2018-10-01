@@ -2,6 +2,7 @@ package uk.ac.bham.cs.schimp.lang.expression.arith;
 
 import uk.ac.bham.cs.schimp.exec.EvaluationException;
 import uk.ac.bham.cs.schimp.exec.ProgramExecutionContext;
+import uk.ac.bham.cs.schimp.exec.VariableScopeFrame;
 import uk.ac.bham.cs.schimp.source.SyntaxCheckContext;
 import uk.ac.bham.cs.schimp.source.SyntaxException;
 
@@ -26,6 +27,12 @@ public class XorOperation extends ArithmeticExpression {
 	public ArithmeticConstant evaluate(ProgramExecutionContext context) throws EvaluationException {
 		// TODO: this operation is only defined for integers, not rational numbers
 		return new ArithmeticConstant(left.evaluate(context).toFraction().intValue() ^ right.evaluate(context).toFraction().intValue());
+	}
+	
+	@Override
+	public ArithmeticConstant evaluate(VariableScopeFrame frame) throws EvaluationException {
+		// TODO: this operation is only defined for integers, not rational numbers
+		return new ArithmeticConstant(left.evaluate(frame).toFraction().intValue() ^ right.evaluate(frame).toFraction().intValue());
 	}
 	
 	public String toString(int indent) {

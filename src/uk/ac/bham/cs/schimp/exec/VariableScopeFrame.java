@@ -100,5 +100,14 @@ public class VariableScopeFrame implements Cloneable {
 		
 		return s.toString();
 	}
+	
+	public String toShortString() {
+		return "{" +
+			scopeFrame.keySet().stream()
+				.sorted()
+				.map(v -> v + "=" + scopeFrame.get(v).toSourceString())
+				.collect(Collectors.joining(" "))
+			+ "}";
+	}
 
 }

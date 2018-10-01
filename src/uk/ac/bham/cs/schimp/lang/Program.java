@@ -56,6 +56,10 @@ public class Program extends Block {
 		return commandTable;
 	}
 	
+	public List<InitialCommand> getInitialCommands() {
+		return initialCommands;
+	}
+	
 	public List<String> getInitialVariableNames() {
 		return initialCommands.stream()
 			.map(i -> i.getVariableReference().getName())
