@@ -113,23 +113,23 @@ public class PRISMModelGenerator implements ModelGenerator {
 		
 		// the names of the variables defined in each prism State object are:
 		// - the unique id representing the ProgramExecutionContext associated with this State
-		prismVarNames.add("[cid]");
+		prismVarNames.add("_cid");
 		// - the execution phase of the schimp program, by its phase id (see PRISMModelGenerator.Phase)
-		prismVarNames.add("[phase]");
-		prismObservableVarNames.add("[phase]");
+		prismVarNames.add("_phase");
+		prismObservableVarNames.add("_phase");
 		// - the unique id representing the list of outputs observed so far from the schimp program
-		prismVarNames.add("[oid]");
-		prismObservableVarNames.add("[oid]");
+		prismVarNames.add("_oid");
+		prismObservableVarNames.add("_oid");
 		// - the cumulative elapsed time of the schimp program (if stateTime is true)
 		if (stateTime) {
-			prismVarNames.add("[time]");
-			prismObservableVarNames.add("[time]");
+			prismVarNames.add("_time");
+			prismObservableVarNames.add("_time");
 			stateInitialVarsOffset++;
 		}
 		// - the cumulative power consumption of the schimp program (if statePower is true)
 		if (statePower) {
-			prismVarNames.add("[power]");
-			prismObservableVarNames.add("[power]");
+			prismVarNames.add("_power");
+			prismObservableVarNames.add("_power");
 			stateInitialVarsOffset++;
 		}
 		// - the names of the schimp program's initial variables to record in the prism state, so they can be included
@@ -174,13 +174,13 @@ public class PRISMModelGenerator implements ModelGenerator {
 	
 	//==========================================================================
 	// the prism State object representing a schimp program execution contains the following variables (all integers):
-	// - "[cid]": a unique id that maps to a ProgramExecutionContext object (stored in schimpExecutionContexts)
-	//            describing the state of the schimp program in more detail
-	// - "[phase]": the id representing the execution phase of the schimp program (see PRISMModelGenerator.Phase)
-	// - "[oid]": a unique id representing a (stringified) list of outputs (stored in schimpExecutionContextOutputLists)
-	//            observed so far from the schimp program
-	// - "[time]": the cumulative elapsed time of the schimp program (if stateTime is true)
-	// - "[power]": the cumulative power consumption of the schimp program (if statePower is true)
+	// - "_cid": a unique id that maps to a ProgramExecutionContext object (stored in schimpExecutionContexts)
+	//           describing the state of the schimp program in more detail
+	// - "_phase": the id representing the execution phase of the schimp program (see PRISMModelGenerator.Phase)
+	// - "_oid": a unique id representing a (stringified) list of outputs (stored in schimpExecutionContextOutputLists)
+	//           observed so far from the schimp program
+	// - "_time": the cumulative elapsed time of the schimp program (if stateTime is true)
+	// - "_power": the cumulative power consumption of the schimp program (if statePower is true)
 	// - "i1".."in": one variable representing the value of each initial variable declared in the schimp program whose
 	//               value is to be recorded in the prism State object, in the order in which the initial variables were
 	//               declared in the schimp program; the value of an initial variable is Integer.MIN_VALUE if it has not
@@ -219,11 +219,11 @@ public class PRISMModelGenerator implements ModelGenerator {
 	public VarList createVarList() {
 		VarList varList = new VarList();
 		try {
-			varList.addVar(new Declaration("[cid]", new DeclarationInt(Expression.Int(-1), Expression.Int(Integer.MAX_VALUE))), 0, null);
-			varList.addVar(new Declaration("[phase]", new DeclarationInt(Expression.Int(1), Expression.Int(PHASE_IDS.size()))), 0, null);
-			varList.addVar(new Declaration("[oid]", new DeclarationInt(Expression.Int(-1), Expression.Int(Integer.MAX_VALUE))), 0, null);
-			if (stateTime) varList.addVar(new Declaration("[time]", new DeclarationInt(Expression.Int(-1), Expression.Int(Integer.MAX_VALUE))), 0, null);
-			if (statePower) varList.addVar(new Declaration("[power]", new DeclarationInt(Expression.Int(-1), Expression.Int(Integer.MAX_VALUE))), 0, null);
+			varList.addVar(new Declaration("_cid", new DeclarationInt(Expression.Int(-1), Expression.Int(Integer.MAX_VALUE))), 0, null);
+			varList.addVar(new Declaration("_phase", new DeclarationInt(Expression.Int(1), Expression.Int(PHASE_IDS.size()))), 0, null);
+			varList.addVar(new Declaration("_oid", new DeclarationInt(Expression.Int(-1), Expression.Int(Integer.MAX_VALUE))), 0, null);
+			if (stateTime) varList.addVar(new Declaration("_time", new DeclarationInt(Expression.Int(-1), Expression.Int(Integer.MAX_VALUE))), 0, null);
+			if (statePower) varList.addVar(new Declaration("_power", new DeclarationInt(Expression.Int(-1), Expression.Int(Integer.MAX_VALUE))), 0, null);
 			for (int i = stateInitialVarsOffset; i < prismVarNames.size(); i++) {
 				varList.addVar(new Declaration(prismVarNames.get(i), new DeclarationInt(Expression.Int(Integer.MIN_VALUE), Expression.Int(Integer.MAX_VALUE))), 0, null);
 			}
