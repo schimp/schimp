@@ -98,6 +98,7 @@ public class CommandLine {
 		try {
 			prism.initialise();
 			prism.setEngine(Prism.EXPLICIT);
+			prism.getSettings().set(PrismSettings.PRISM_SORT_STATES, false);
 		} catch (PrismException e) {
 			e.printStackTrace();
 			System.exit(1);
