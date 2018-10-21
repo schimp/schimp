@@ -12,5 +12,6 @@
 	<classpathentry kind="lib" path="lib/prism-git-linux64/prism.jar" sourcepath="lib/prism-git-linux64/prism-sources.jar"/>
 	<classpathentry kind="lib" path="lib/jopt-simple-5.0.4.jar"/>
 	<classpathentry kind="lib" path="lib/commons-collections4-4.2.jar"/>
+	<classpathentry kind="lib" path="lib/prism-git-linux64/colt.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
