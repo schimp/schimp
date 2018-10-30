@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.apache.commons.collections4.ListUtils;
 
@@ -20,7 +21,9 @@ import prism.Prism;
 import prism.PrismException;
 import prism.PrismFileLog;
 import prism.PrismLog;
-import uk.ac.bham.cs.schimp.exec.graphviz.StateDecorator;
+import prism.PrismSettings;
+import uk.ac.bham.cs.schimp.exec.graphviz.AttackerModelStateDecorator;
+import uk.ac.bham.cs.schimp.exec.graphviz.SCHIMPModelStateDecorator;
 import uk.ac.bham.cs.schimp.lang.Program;
 import uk.ac.bham.cs.schimp.source.FunctionModelSourceFile;
 import uk.ac.bham.cs.schimp.source.SourceFile;
@@ -60,9 +63,10 @@ public class CommandLine {
 			System.exit(1);
 		}
 		
+		File sourceArg = (File)options.nonOptionArguments().get(0);
 		Program program = null;
 		try {
-			SourceFile source = new SourceFile((File)options.nonOptionArguments().get(0));
+			SourceFile source = new SourceFile(sourceArg);
 			program = options.has("fnmodel-file") ?
 				source.parse(((FunctionModelSourceFile)options.valueOf("fnmodel-file")).parse()) :
 				source.parse(null);
@@ -94,40 +98,71 @@ public class CommandLine {
 		}
 		
 		PrismLog prismStdout = new PrismFileLog("stdout");
-		Prism prism = new Prism(prismStdout);
+		
+		Prism prismSchimpExecution = new Prism(prismStdout);
 		try {
-			prism.initialise();
-			prism.setEngine(Prism.EXPLICIT);
-			prism.getSettings().set(PrismSettings.PRISM_SORT_STATES, false);
+			prismSchimpExecution.initialise();
+			prismSchimpExecution.setEngine(Prism.EXPLICIT);
+			prismSchimpExecution.getSettings().set(PrismSettings.PRISM_SORT_STATES, false);
 		} catch (PrismException e) {
 			e.printStackTrace();
 			System.exit(1);
 		}
-		
-		PRISMModelGenerator modelGenerator = new PRISMModelGenerator(
+			
+		PRISMModelGenerator schimpModelGenerator = new PRISMModelGenerator(
 			program,
 			options.has("time-var"),
 			options.has("power-var"),
 			trackedInitialVariables,
 			!options.has("all-transitions")
 		);
-		prism.loadModelGenerator(modelGenerator);
+		prismSchimpExecution.loadModelGenerator(schimpModelGenerator);
 		try {
-			prism.buildModelIfRequired();
+			prismSchimpExecution.buildModelIfRequired();
+		} catch (PrismException e) {
+			e.printStackTrace();
+			System.exit(1);
+		}
+			
+		Prism prismAttackerGuesses = new Prism(prismStdout);
+		try {
+			prismAttackerGuesses.initialise();
+			prismAttackerGuesses.setEngine(Prism.EXPLICIT);
+			prismAttackerGuesses.getSettings().set(PrismSettings.PRISM_SORT_STATES, false);
+			prismAttackerGuesses.getSettings().set(PrismSettings.PRISM_GRID_RESOLUTION, 128);
+		} catch (PrismException e) {
+			e.printStackTrace();
+			System.exit(1);
+		}
+		
+		AttackerModelGenerator attackerModelGenerator = AttackerModelGenerator.fromSCHIMPModel(
+			prismSchimpExecution,
+			schimpModelGenerator
+		);
+		prismAttackerGuesses.loadModelGenerator(attackerModelGenerator);
+		try {
+			prismAttackerGuesses.buildModelIfRequired();
 		} catch (PrismException e) {
 			e.printStackTrace();
 			System.exit(1);
 		}
 		
 		if (options.has("dot-file")) {
-			String dotFilePath = options.hasArgument("dot-file") ?
-				((File)options.valueOf("dot-file")).getPath() :
-				((File)options.nonOptionArguments().get(0)).getPath() + ".dot";
-			ArrayList<Decorator> decorators = new ArrayList<>();
-			decorators.add(new StateDecorator(prism.getBuiltModelExplicit().getStatesList(), modelGenerator));
-			PrismLog dotFile = new PrismFileLog(dotFilePath);
-			prism.getBuiltModelExplicit().exportToDotFile(dotFile, decorators);
-			dotFile.flush();
+			List<String> dotFilePaths = options.hasArgument("dot-file") ?
+				options.valuesOf("dot-file").stream().map(f -> ((File)f).getPath()).collect(Collectors.toList()) :
+				Stream.of(new String[] { ".exec.dot", ".attacker.dot" }).map(f -> sourceArg.getPath() + f).collect(Collectors.toList());
+				
+			ArrayList<Decorator> schimpExecutionDecorators = new ArrayList<>();
+			schimpExecutionDecorators.add(new SCHIMPModelStateDecorator(prismSchimpExecution.getBuiltModelExplicit().getStatesList(), schimpModelGenerator));
+			PrismLog schimpExecutionDotFile = new PrismFileLog(dotFilePaths.get(0));
+			prismSchimpExecution.getBuiltModelExplicit().exportToDotFile(schimpExecutionDotFile, schimpExecutionDecorators);
+			schimpExecutionDotFile.flush();
+			
+			ArrayList<Decorator> attackerGuessesDecorators = new ArrayList<>();
+			attackerGuessesDecorators.add(new AttackerModelStateDecorator(prismAttackerGuesses.getBuiltModelExplicit().getStatesList(), attackerModelGenerator));
+			PrismLog attackerGuessesDotFile = new PrismFileLog(dotFilePaths.get(1));
+			prismAttackerGuesses.getBuiltModelExplicit().exportToDotFile(attackerGuessesDotFile, attackerGuessesDecorators);
+			attackerGuessesDotFile.flush();
 		}
 		
 		try {
@@ -136,7 +171,7 @@ public class CommandLine {
 			System.out.print( "check> " );
 			while ((in = stdinReader.readLine()) != null) {
 				try {
-					System.out.println(prism.modelCheck(in).getResult());
+					System.out.println(prismAttackerGuesses.modelCheck(in).getResult());
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
@@ -171,7 +206,7 @@ public class CommandLine {
 			
 		});
 		
-		parser.acceptsAll(Arrays.asList("d", "dot-file")).withOptionalArg().ofType(File.class);
+		parser.acceptsAll(Arrays.asList("d", "dot-file")).withOptionalArg().ofType(File.class).withValuesSeparatedBy(':');
 		
 		parser.acceptsAll(Arrays.asList("T", "time-var"));
 		
