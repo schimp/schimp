@@ -26,6 +26,7 @@ import prism.PrismLangException;
 public class AttackerModelGenerator implements ModelGenerator {
 	
 	private Prism prism;
+	private PRISMModelGenerator schimpModelGenerator;
 	
 	// the indices of various pieces of information in the prism State object's variables array; cumulative elapsed time
 	// and consumed power are only present as variables if stateTime and statePower respectively are set to true in the
@@ -69,6 +70,7 @@ public class AttackerModelGenerator implements ModelGenerator {
 	
 	private AttackerModelGenerator(Prism prism, PRISMModelGenerator schimpModelGenerator) {
 		this.prism = prism;
+		this.schimpModelGenerator = schimpModelGenerator;
 		
 		stateInitialVars = schimpModelGenerator.stateInitialVariableNames();
 		
@@ -119,6 +121,10 @@ public class AttackerModelGenerator implements ModelGenerator {
 		emptyAttackerGuessedState.varValues = new Object[prismVarNames.size()];
 		Arrays.fill(emptyAttackerGuessedState.varValues, -1);
 		emptyAttackerGuessedState.varValues[0] = 2;
+	}
+	
+	public String getOutputList(int outputListID) {
+		return schimpModelGenerator.getOutputList(outputListID);
 	}
 	
 	public int getStateOutputIDIndex() {

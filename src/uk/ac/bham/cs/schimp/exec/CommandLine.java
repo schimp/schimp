@@ -114,7 +114,7 @@ public class CommandLine {
 			options.has("time-var"),
 			options.has("power-var"),
 			trackedInitialVariables,
-			!options.has("all-transitions")
+			!options.has("show-all-transitions")
 		);
 		prismSchimpExecution.loadModelGenerator(schimpModelGenerator);
 		try {
@@ -153,13 +153,13 @@ public class CommandLine {
 				Stream.of(new String[] { ".exec.dot", ".attacker.dot" }).map(f -> sourceArg.getPath() + f).collect(Collectors.toList());
 				
 			ArrayList<Decorator> schimpExecutionDecorators = new ArrayList<>();
-			schimpExecutionDecorators.add(new SCHIMPModelStateDecorator(prismSchimpExecution.getBuiltModelExplicit().getStatesList(), schimpModelGenerator));
+			schimpExecutionDecorators.add(new SCHIMPModelStateDecorator(prismSchimpExecution.getBuiltModelExplicit().getStatesList(), schimpModelGenerator, options.has("show-outputs")));
 			PrismLog schimpExecutionDotFile = new PrismFileLog(dotFilePaths.get(0));
 			prismSchimpExecution.getBuiltModelExplicit().exportToDotFile(schimpExecutionDotFile, schimpExecutionDecorators);
 			schimpExecutionDotFile.flush();
 			
 			ArrayList<Decorator> attackerGuessesDecorators = new ArrayList<>();
-			attackerGuessesDecorators.add(new AttackerModelStateDecorator(prismAttackerGuesses.getBuiltModelExplicit().getStatesList(), attackerModelGenerator));
+			attackerGuessesDecorators.add(new AttackerModelStateDecorator(prismAttackerGuesses.getBuiltModelExplicit().getStatesList(), attackerModelGenerator, options.has("show-outputs")));
 			PrismLog attackerGuessesDotFile = new PrismFileLog(dotFilePaths.get(1));
 			prismAttackerGuesses.getBuiltModelExplicit().exportToDotFile(attackerGuessesDotFile, attackerGuessesDecorators);
 			attackerGuessesDotFile.flush();
@@ -214,7 +214,9 @@ public class CommandLine {
 		
 		parser.acceptsAll(Arrays.asList("I", "initial-vars")).withRequiredArg().ofType(String.class).withValuesSeparatedBy(',');
 		
-		parser.acceptsAll(Arrays.asList("a", "all-transitions"));
+		parser.acceptsAll(Arrays.asList("o", "show-outputs"));
+		
+		parser.acceptsAll(Arrays.asList("a", "show-all-transitions"));
 		
 		// --help (optional): show program help and exit
 		parser.accepts("help");

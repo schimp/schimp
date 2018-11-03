@@ -48,8 +48,9 @@ public class PRISMModelGenerator implements ModelGenerator {
 	// a reverse map for schimpExecutionContexts, but based on (much shorter) hashes of ProgramExecutionContext strings
 	private Map<String, Integer> schimpExecutionContextHashes = new HashMap<>();
 	
-	// a map from unique (stringified) lists of schimp program outputs to ids
-	private Map<String, Integer> schimpExecutionContextOutputLists = new HashMap<>();
+	// a map from unique (stringified) lists of schimp program outputs to ids, and another map for the reverse
+	private Map<String, Integer> schimpExecutionContextOutputListIDs = new HashMap<>();
+	private Map<Integer, String> schimpExecutionContextOutputLists = new HashMap<>();
 	private int lastOutputListID = 0;
 	
 	// the prism State object that is currently being explored
@@ -367,7 +368,7 @@ public class PRISMModelGenerator implements ModelGenerator {
 		// - "[cid]"
 		state.setValue(nextIndex++, contextID);
 		// - "[oid]"
-		state.setValue(nextIndex++, getOutputsID(context.outputsToString()));
+		state.setValue(nextIndex++, getOutputListID(context.outputsToString()));
 		// - "[time]" (if stateTime is true)
 		if (stateTimeIndex != -1) state.setValue(nextIndex++, context.elapsedTime);
 		// - "[power]" (if statePower is true)
@@ -399,11 +400,16 @@ public class PRISMModelGenerator implements ModelGenerator {
 		}
 	}
 	
-	private int getOutputsID(String outputsList) {
-		if (schimpExecutionContextOutputLists.containsKey(outputsList)) {
-			return schimpExecutionContextOutputLists.get(outputsList);
+	public String getOutputList(int outputListID) {
+		return schimpExecutionContextOutputLists.get(outputListID);
+	}
+	
+	private int getOutputListID(String outputList) {
+		if (schimpExecutionContextOutputListIDs.containsKey(outputList)) {
+			return schimpExecutionContextOutputListIDs.get(outputList);
 		} else {
-			schimpExecutionContextOutputLists.put(outputsList, ++lastOutputListID);
+			schimpExecutionContextOutputListIDs.put(outputList, ++lastOutputListID);
+			schimpExecutionContextOutputLists.put(lastOutputListID, outputList);
 			return lastOutputListID;
 		}
 	}

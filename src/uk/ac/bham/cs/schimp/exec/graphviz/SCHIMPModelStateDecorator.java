@@ -14,11 +14,13 @@ public class SCHIMPModelStateDecorator implements Decorator {
 	private List<State> stateList;
 	private PRISMModelGenerator modelGenerator;
 	private List<String> initialVariableNames;
+	private boolean showOutputLists = false;
 	
-	public SCHIMPModelStateDecorator(List<State> stateList, PRISMModelGenerator modelGenerator) {
+	public SCHIMPModelStateDecorator(List<State> stateList, PRISMModelGenerator modelGenerator, boolean showOutputLists) {
 		this.stateList = stateList;
 		this.modelGenerator = modelGenerator;
 		initialVariableNames = modelGenerator.stateInitialVariableNames();
+		this.showOutputLists = showOutputLists;
 	}
 	
 	public Decoration decorateState(int state, Decoration d) {
@@ -51,8 +53,14 @@ public class SCHIMPModelStateDecorator implements Decorator {
 			);
 		}
 		
-		// - the outputs that the program has produced in this SCHIMPExecutionContext
-		label.append("out: " + prismState.varValues[modelGenerator.getStateOutputIDIndex()] + "\n");
+		// - the outputs that the program has produced in this SCHIMPExecutionContext, either as the actual list of
+		//   outputs (if showOutputLists is true) or a unique id representing a particular list of outputs (if
+		//   showOutputLists is false)
+		if (showOutputLists) {
+			label.append("out: " + modelGenerator.getOutputList((int)prismState.varValues[modelGenerator.getStateOutputIDIndex()]) + "\n");
+		} else {
+			label.append("out: " + prismState.varValues[modelGenerator.getStateOutputIDIndex()] + "\n");
+		}
 		
 		// - the elapsed time and power consumption by the time this SCHIMPExecutionContext is reached
 		label.append("◷ " + context.elapsedTime + "  ⚡ " + context.totalPowerConsumption);

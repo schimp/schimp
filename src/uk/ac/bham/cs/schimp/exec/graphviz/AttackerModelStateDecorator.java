@@ -15,11 +15,13 @@ public class AttackerModelStateDecorator implements Decorator {
 	private List<State> stateList;
 	private AttackerModelGenerator modelGenerator;
 	private List<String> initialVariableNames;
+	private boolean showOutputLists = false;
 	
-	public AttackerModelStateDecorator(List<State> stateList, AttackerModelGenerator modelGenerator) {
+	public AttackerModelStateDecorator(List<State> stateList, AttackerModelGenerator modelGenerator, boolean showOutputLists) {
 		this.stateList = stateList;
 		this.modelGenerator = modelGenerator;
 		initialVariableNames = modelGenerator.stateInitialVariableNames();
+		this.showOutputLists = showOutputLists;
 	}
 	
 	public Decoration decorateState(int state, Decoration d) {
@@ -50,8 +52,14 @@ public class AttackerModelStateDecorator implements Decorator {
 					);
 				}
 				
-				// - the outputs that the program produced in this SCHIMPExecutionContext
-				label.append("out: " + prismState.varValues[modelGenerator.getStateOutputIDIndex()]);
+				// - the outputs that the program produced in this SCHIMPExecutionContext, either as the actual list of
+				//   outputs (if showOutputLists is true) or a unique id representing a particular list of outputs (if
+				//   showOutputLists is false)
+				if (showOutputLists) {
+					label.append("out: " + modelGenerator.getOutputList((int)prismState.varValues[modelGenerator.getStateOutputIDIndex()]));
+				} else {
+					label.append("out: " + prismState.varValues[modelGenerator.getStateOutputIDIndex()]);
+				}
 				
 				// - the total elapsed time and power consumption (if present in the state)
 				if (modelGenerator.stateHasTime() || modelGenerator.stateHasPower()) {
