@@ -1,1 +1,6 @@
 /bin/
+
+# DOT files generated for examples (and any files Graphviz generates based on
+# them), based on the default filenames
+/examples/*.schimp.exec.*
+/examples/*.schimp.attacker.*
