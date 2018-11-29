@@ -1,3 +1,30 @@
+# ONLY UNCOMMENT ONE OF THESE FUNCTION MODELS!
+
+# No timing side-channel:
 model announce/3 := {
 	(_, _, _) -> (1, 0)
 }
+
+# Timing side-channel equivalent to the one in the guess-pomdp example
+#model announce/3 := {
+#	(3, _, _) -> (2, 0),
+#	(_, _, _) -> (1, 0)
+#}
+
+# Timing side-channel (billpayer takes slightly longer to execute)
+#model announce/3 := {
+#	(_, 0, _) -> {
+#		(1, 0) -> 1/10,
+#		(2, 0) -> 2/10,
+#		(3, 0) -> 4/10,
+#		(4, 0) -> 2/10,
+#		(5, 0) -> 1/10
+#	},
+#	(_, 1, _) -> {
+#		(3, 0) -> 1/10,
+#		(4, 0) -> 2/10,
+#		(5, 0) -> 4/10,
+#		(6, 0) -> 2/10,
+#		(7, 0) -> 1/10
+#	}
+#}
