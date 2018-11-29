@@ -96,8 +96,7 @@ public class PRISMModelGenerator implements ModelGenerator {
 		} else {
 			statePowerIndex = -1;
 		}
-		// - the names of the schimp program's initial variables to record in the prism state, so they can be included
-		//   in prism property queries
+		// - the names of the schimp program's initial variables to record in the prism state
 		prismVarNames.addAll(stateInitialVars);
 		stateInitialVarsOffset = ++varIndex;
 		

@@ -15,12 +15,16 @@ public class AttackerModelStateDecorator implements Decorator {
 	private List<State> stateList;
 	private AttackerModelGenerator modelGenerator;
 	private List<String> initialVariableNames;
+	private int initialVariablesOffset;
+	private int initialVariableGuessesOffset;
 	private boolean showOutputLists = false;
 	
 	public AttackerModelStateDecorator(List<State> stateList, AttackerModelGenerator modelGenerator, boolean showOutputLists) {
 		this.stateList = stateList;
 		this.modelGenerator = modelGenerator;
 		initialVariableNames = modelGenerator.stateInitialVariableNames();
+		initialVariablesOffset = modelGenerator.getStateInitialVariablesOffset();
+		initialVariableGuessesOffset = modelGenerator.getStateInitialVariableGuessesOffset();
 		this.showOutputLists = showOutputLists;
 	}
 	
@@ -44,7 +48,7 @@ public class AttackerModelStateDecorator implements Decorator {
 				// add information about the SCHIMPExecutionContext to this state's label:
 				// - the value of each initial variable in this SCHIMPExecutionContext
 				Iterator<String> n = initialVariableNames.iterator();
-				for (int v = modelGenerator.getStateInitialVariablesOffset(); v < prismState.varValues.length; v++) {
+				for (int v = initialVariablesOffset; v < initialVariableGuessesOffset; v++) {
 					label.append(
 						n.next() + " = " +
 						((int)prismState.varValues[v] == Integer.MIN_VALUE ? "undef" : prismState.varValues[v]) +
@@ -78,7 +82,7 @@ public class AttackerModelStateDecorator implements Decorator {
 				// if correct, red if incorrect)
 				List<String> pieces = new ArrayList<>();
 				Iterator<String> it = initialVariableNames.iterator();
-				for (int v = prismState.varValues.length - initialVariableNames.size(); v < prismState.varValues.length; v++) {
+				for (int v = initialVariableGuessesOffset; v < prismState.varValues.length; v++) {
 					pieces.add(
 						"<font color='" +
 						((int)prismState.varValues[v] == 1 ? "green" : "red") +

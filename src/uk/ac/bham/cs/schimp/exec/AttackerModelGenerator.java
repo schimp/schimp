@@ -28,16 +28,22 @@ public class AttackerModelGenerator implements ModelGenerator {
 	private Prism prism;
 	private PRISMModelGenerator schimpModelGenerator;
 	
-	// the indices of various pieces of information in the prism State object's variables array; cumulative elapsed time
-	// and consumed power are only present as variables if stateTime and statePower respectively are set to true in the
-	// call to the constructor, otherwise they will be omitted and their indices will be -1
+	// the indices of various pieces of information in the prism State object's variables array:
 	private int stateOutputIDIndex = 1;
+	// - cumulative elapsed time and consumed power are only present as variables if stateTime and statePower
+	//   respectively are set to true in the call to the constructor, otherwise they will be omitted and their indices
+	//   will be -1
 	private int stateTimeIndex = -1;
 	private int statePowerIndex = -1;
+	// - the values of the schimp program's initial variables begin at this index
+	private int stateInitialVarsOffset;
+	// - the correctness indicators for the attacker's guesses of the initial variables begin at this index; in phases
+	//   0 and 1, these are always -1, and become either 1 (indicating a correct guess) or 0 (indicating an incorrect
+	//   guess) in phase 2
+	private int stateInitialVarGuessesOffset;
 	
 	// the names of the initial variables whose values are tracked in prism State objects
 	private List<String> stateInitialVars;
-	private int stateInitialVarsOffset = 2;
 	
 	// the prism State object that is currently being explored
 	private State exploringState;
@@ -59,7 +65,8 @@ public class AttackerModelGenerator implements ModelGenerator {
 	// a cartesian product iterator for the possible values of initial variables recorded in prism State objects
 	private VariableValueCartesianProduct varValueProduct;
 	
-	// a barebones prism State object that is used as the basis for creating phase-2 State objects
+	// barebones prism State objects used as the basis for creating phase-1 and phase-2 State objects
+	private State emptyProgramTerminatedState;
 	private State emptyAttackerGuessedState;
 	
 	//==========================================================================
@@ -99,10 +106,21 @@ public class AttackerModelGenerator implements ModelGenerator {
 		} else {
 			statePowerIndex = -1;
 		}
-		// - the names of the schimp program's initial variables recorded in the prism state, so they can be included
-		//   in prism property queries
-		prismVarNames.addAll(schimpModelGenerator.stateInitialVariableNames());
+		// - the names of the schimp program's initial variables recorded in the prism state
+		prismVarNames.addAll(stateInitialVars);
 		stateInitialVarsOffset = ++varIndex;
+		// - the correctness indicators for the attacker's guesses of the values of the initial variables
+		prismVarNames.addAll(
+			stateInitialVars.stream()
+				.map(v -> "_correct_" + v)
+				.collect(Collectors.toList())
+		);
+		prismObservableVarNames.addAll(
+			stateInitialVars.stream()
+				.map(v -> "_correct_" + v)
+				.collect(Collectors.toList())
+		);
+		stateInitialVarGuessesOffset = (varIndex += schimpModelGenerator.stateInitialVariableNames().size());
 		
 		// these variables are all integers
 		prismVarTypes = prismVarNames.stream()
@@ -115,8 +133,17 @@ public class AttackerModelGenerator implements ModelGenerator {
 				.collect(Collectors.toList())
 		);
 		
-		// the barebones State object for "_phase" = 2 contains the phase id 2 and -1 everywhere else; the indices
-		// representing initial variables will be set when createStateFromAttackerGuesses() is called
+		// the barebones State object for "_phase" = 1 contains the phase id 1 and -1 everywhere else; the variables
+		// representing the SCHIMPExecutionContext's outputs list id, time and power consumption and initial variable
+		// values will be set when exploreState() is called
+		emptyProgramTerminatedState = new State(prismVarNames.size());
+		emptyProgramTerminatedState.varValues = new Object[prismVarNames.size()];
+		Arrays.fill(emptyProgramTerminatedState.varValues, -1);
+		emptyProgramTerminatedState.varValues[0] = 1;
+		
+		// the barebones State object for "_phase" = 2 contains the phase id 2 and -1 everywhere else; the variables
+		// representing the correctness of the attacker's guesses of the initial variables will be set when
+		// createStateFromAttackerGuesses() is called
 		emptyAttackerGuessedState = new State(prismVarNames.size());
 		emptyAttackerGuessedState.varValues = new Object[prismVarNames.size()];
 		Arrays.fill(emptyAttackerGuessedState.varValues, -1);
@@ -155,6 +182,10 @@ public class AttackerModelGenerator implements ModelGenerator {
 		return stateInitialVarsOffset;
 	}
 	
+	public int getStateInitialVariableGuessesOffset() {
+		return stateInitialVarGuessesOffset;
+	}
+	
 	//==========================================================================
 	// the attacker's ability is modelled as a partially-observable markov decision process
 	
@@ -174,12 +205,9 @@ public class AttackerModelGenerator implements ModelGenerator {
 	// - "_power": the power consumption of the schimp program (if statePower is true)
 	// - "i1".."in": one variable representing each initial variable declared in the schimp program whose value is
 	//               recorded in the prism State object, in the order in which the initial variables were declared in
-	//               the schimp program; the purpose of this variable depends on whether the attacker has guessed the
-	//               value of each secret variable yet (see "_guessed"):
-	//               - if "_guessed" = 0, each variable contains the value of the secret variable at the point at which
-	//                 it was declared in the program
-	//               - if "_guessed" = 1, each variable contains the value 0 if the attacker's guess for the variable's
-	//                 value was incorrect, or 1 if it was correct
+	//               the schimp program
+	// - "_correct_i1".."_correct_in": when "_phase" = 2, one value per initial variable indicating whether the attacker
+	//                                 correctly guessed the value of each secret variable (1 if so, 0 if not)
 	
 	@Override
 	public int getNumVars() {
@@ -219,8 +247,13 @@ public class AttackerModelGenerator implements ModelGenerator {
 			varList.addVar(new Declaration("_oid", new DeclarationInt(Expression.Int(-1), Expression.Int(Integer.MAX_VALUE))), 0, null);
 			if (stateTimeIndex != -1) varList.addVar(new Declaration("_time", new DeclarationInt(Expression.Int(-1), Expression.Int(Integer.MAX_VALUE))), 0, null);
 			if (statePowerIndex != -1) varList.addVar(new Declaration("_power", new DeclarationInt(Expression.Int(-1), Expression.Int(Integer.MAX_VALUE))), 0, null);
+			// "i1".."in"
 			for (int i = stateInitialVarsOffset; i < prismVarNames.size(); i++) {
 				varList.addVar(new Declaration(prismVarNames.get(i), new DeclarationInt(Expression.Int(Integer.MIN_VALUE), Expression.Int(Integer.MAX_VALUE))), 0, null);
+			}
+			// "_correct_i1".."_correct_in"
+			for (int i = stateInitialVarsOffset; i < prismVarNames.size(); i++) {
+				varList.addVar(new Declaration("_correct_" + prismVarNames.get(i), new DeclarationInt(Expression.Int(-1), Expression.Int(1))), 0, null);
 			}
 		} catch (PrismLangException e) {}
 		return varList;
@@ -323,19 +356,19 @@ public class AttackerModelGenerator implements ModelGenerator {
 				
 				// iterate over each of the terminating states in the generated prism model, and create new states for
 				// this model based on them; the variables in each state are the same with the exception of the first,
-				// which is "_phase" (always 1) rather than "_cid" (which isn't necessary in the attacker model)
+				// which is "_phase" (always 1) rather than "_cid" (which isn't necessary in the attacker model), and
+				// the guess correctness indicators for each initial variable (which are meaningless in phase 0, as the
+				// attacker doesn't make their guesses until the phase 1->2 transition)
 				PRISMStateMap stateMap = new PRISMStateMap();
 				List<State> states = prism.getBuiltModelExplicit().getStatesList();
 				double[] stateProbabilities = steadyState.getDoubleArray();
-				int stateLength = states.get(0).varValues.length;
 				int stateCommonSubsetLength = states.get(0).varValues.length - 1;
 				for (int i = 0; i < stateProbabilities.length; i++) {
 					if (stateProbabilities[i] > 0) {
 						// TODO: correctly deal with the case in which self-loop states from the model are actually
 						// non-terminating infinite-loop states
 						//System.out.println(i + ": terminating or infinite loop state");
-						State s = new State(stateLength);
-						s.setValue(0, 1); // "_phase" = 1
+						State s = new State(emptyProgramTerminatedState);
 						System.arraycopy(states.get(i).varValues, 1, s.varValues, 1, stateCommonSubsetLength);
 						stateMap.add(s, stateProbabilities[i]);
 					}
@@ -375,10 +408,10 @@ public class AttackerModelGenerator implements ModelGenerator {
 	private State createStateFromAttackerGuesses(State state, VariableScopeFrame guesses) {
 		State newState = new State(emptyAttackerGuessedState);
 		
-		for (int i = stateInitialVarsOffset; i < prismVarNames.size(); i++) {
+		for (int i = 0; i < stateInitialVarGuessesOffset - stateInitialVarsOffset; i++) {
 			try {
-				newState.setValue(i,
-					guesses.evaluate(prismVarNames.get(i)).toFraction().intValue() == (int)state.varValues[i] ?
+				newState.setValue(stateInitialVarGuessesOffset + i,
+					guesses.evaluate(prismVarNames.get(stateInitialVarsOffset + i)).toFraction().intValue() == (int)state.varValues[stateInitialVarsOffset + i] ?
 					1 : // correct guess for the value of this initial variable
 					0   // incorrect guess for the value of this initial variable
 				);
