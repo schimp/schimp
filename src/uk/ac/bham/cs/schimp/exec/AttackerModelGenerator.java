@@ -29,7 +29,7 @@ public class AttackerModelGenerator implements ModelGenerator {
 	private PRISMModelGenerator schimpModelGenerator;
 	
 	// the indices of various pieces of information in the prism State object's variables array:
-	private int stateOutputIDIndex = 1;
+	private int stateObservationsIDIndex = 1;
 	// - cumulative elapsed time and consumed power are only present as variables if stateTime and statePower
 	//   respectively are set to true in the call to the constructor, otherwise they will be omitted and their indices
 	//   will be -1
@@ -86,8 +86,8 @@ public class AttackerModelGenerator implements ModelGenerator {
 		int varIndex = 1; // 0 = "_phase", 1 = "_oid"; always present
 		prismVarNames.add("_phase");
 		prismObservableVarNames.add("_phase");
-		// - the unique id representing the list of outputs observed from the schimp program (we don't actually need to
-		//   know the exact contents of these lists, only which ones are used by each state)
+		// - the unique id representing the observations produced by the schimp program (we don't actually need to
+		//   know the exact contents of these observations, only which ones are used by each state)
 		prismVarNames.add("_oid");
 		prismObservableVarNames.add("_oid");
 		// - the cumulative elapsed time of the schimp program (if present in PRISMModelGenerator states)
@@ -134,7 +134,7 @@ public class AttackerModelGenerator implements ModelGenerator {
 		);
 		
 		// the barebones State object for "_phase" = 1 contains the phase id 1 and -1 everywhere else; the variables
-		// representing the SCHIMPExecutionContext's outputs list id, time and power consumption and initial variable
+		// representing the SCHIMPExecutionContext's observations id, time and power consumption and initial variable
 		// values will be set when exploreState() is called
 		emptyProgramTerminatedState = new State(prismVarNames.size());
 		emptyProgramTerminatedState.varValues = new Object[prismVarNames.size()];
@@ -150,12 +150,12 @@ public class AttackerModelGenerator implements ModelGenerator {
 		emptyAttackerGuessedState.varValues[0] = 2;
 	}
 	
-	public String getOutputList(int outputListID) {
-		return schimpModelGenerator.getOutputList(outputListID);
+	public String getObservations(int observationsID) {
+		return schimpModelGenerator.getObservations(observationsID);
 	}
 	
-	public int getStateOutputIDIndex() {
-		return stateOutputIDIndex;
+	public int getStateObservationsIDIndex() {
+		return stateObservationsIDIndex;
 	}
 	
 	public boolean stateHasTime() {
@@ -200,7 +200,7 @@ public class AttackerModelGenerator implements ModelGenerator {
 	//             - 0 if this is the initial state
 	//             - 1 if the attacker is yet to guess the value of each secret variable being tracked
 	//             - 2 if the attacker has guessed the value of each secret variable being tracked
-	// - "_oid": a unique id representing a (stringified) list of outputs observed during the schimp program's execution
+	// - "_oid": a unique id representing (stringified) observations produced by the schimp program's execution
 	// - "_time": the elapsed time of the schis yet toimp program (if stateTime is true)
 	// - "_power": the power consumption of the schimp program (if statePower is true)
 	// - "i1".."in": one variable representing each initial variable declared in the schimp program whose value is

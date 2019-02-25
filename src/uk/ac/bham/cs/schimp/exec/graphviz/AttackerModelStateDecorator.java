@@ -17,15 +17,15 @@ public class AttackerModelStateDecorator implements Decorator {
 	private List<String> initialVariableNames;
 	private int initialVariablesOffset;
 	private int initialVariableGuessesOffset;
-	private boolean showOutputLists = false;
+	private boolean showObservations = false;
 	
-	public AttackerModelStateDecorator(List<State> stateList, AttackerModelGenerator modelGenerator, boolean showOutputLists) {
+	public AttackerModelStateDecorator(List<State> stateList, AttackerModelGenerator modelGenerator, boolean showObservations) {
 		this.stateList = stateList;
 		this.modelGenerator = modelGenerator;
 		initialVariableNames = modelGenerator.stateInitialVariableNames();
 		initialVariablesOffset = modelGenerator.getStateInitialVariablesOffset();
 		initialVariableGuessesOffset = modelGenerator.getStateInitialVariableGuessesOffset();
-		this.showOutputLists = showOutputLists;
+		this.showObservations = showObservations;
 	}
 	
 	public Decoration decorateState(int state, Decoration d) {
@@ -56,13 +56,13 @@ public class AttackerModelStateDecorator implements Decorator {
 					);
 				}
 				
-				// - the outputs that the program produced in this SCHIMPExecutionContext, either as the actual list of
-				//   outputs (if showOutputLists is true) or a unique id representing a particular list of outputs (if
-				//   showOutputLists is false)
-				if (showOutputLists) {
-					label.append("out: " + modelGenerator.getOutputList((int)prismState.varValues[modelGenerator.getStateOutputIDIndex()]));
+				// - the observations that the program produced in this SCHIMPExecutionContext, either as the actual
+				//   observations (if showObservations is true) or a unique id representing particular observations (if
+				//   showObservations is false)
+				if (showObservations) {
+					label.append("obs: " + modelGenerator.getObservations((int)prismState.varValues[modelGenerator.getStateObservationsIDIndex()]));
 				} else {
-					label.append("out: " + prismState.varValues[modelGenerator.getStateOutputIDIndex()]);
+					label.append("obs: " + prismState.varValues[modelGenerator.getStateObservationsIDIndex()]);
 				}
 				
 				// - the total elapsed time and power consumption (if present in the state)

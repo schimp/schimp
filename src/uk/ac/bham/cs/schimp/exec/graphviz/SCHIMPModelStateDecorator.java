@@ -14,13 +14,13 @@ public class SCHIMPModelStateDecorator implements Decorator {
 	private List<State> stateList;
 	private PRISMModelGenerator modelGenerator;
 	private List<String> initialVariableNames;
-	private boolean showOutputLists = false;
+	private boolean showObservations = false;
 	
-	public SCHIMPModelStateDecorator(List<State> stateList, PRISMModelGenerator modelGenerator, boolean showOutputLists) {
+	public SCHIMPModelStateDecorator(List<State> stateList, PRISMModelGenerator modelGenerator, boolean showObservations) {
 		this.stateList = stateList;
 		this.modelGenerator = modelGenerator;
 		initialVariableNames = modelGenerator.stateInitialVariableNames();
-		this.showOutputLists = showOutputLists;
+		this.showObservations = showObservations;
 	}
 	
 	public Decoration decorateState(int state, Decoration d) {
@@ -53,13 +53,13 @@ public class SCHIMPModelStateDecorator implements Decorator {
 			);
 		}
 		
-		// - the outputs that the program has produced in this SCHIMPExecutionContext, either as the actual list of
-		//   outputs (if showOutputLists is true) or a unique id representing a particular list of outputs (if
-		//   showOutputLists is false)
-		if (showOutputLists) {
-			label.append("out: " + modelGenerator.getOutputList((int)prismState.varValues[modelGenerator.getStateOutputIDIndex()]) + "\n");
+		// - the observations that the program has produced in this SCHIMPExecutionContext, either as the actual
+		//   observations (if showObservations is true) or a unique id representing particular observations (if
+		//   showObservations is false)
+		if (showObservations) {
+			label.append("obs: " + modelGenerator.getObservations((int)prismState.varValues[modelGenerator.getStateObservationsIDIndex()]) + "\n");
 		} else {
-			label.append("out: " + prismState.varValues[modelGenerator.getStateOutputIDIndex()] + "\n");
+			label.append("obs: " + prismState.varValues[modelGenerator.getStateObservationsIDIndex()] + "\n");
 		}
 		
 		// - the elapsed time and power consumption by the time this SCHIMPExecutionContext is reached

@@ -10,6 +10,7 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.javatuples.Pair;
 
 import uk.ac.bham.cs.schimp.lang.Program;
 import uk.ac.bham.cs.schimp.lang.command.Command;
@@ -25,8 +26,7 @@ public class ProgramExecutionContext implements Cloneable {
 	public VariableScopeFrame initialVariableBindings = new VariableScopeFrame(VariableScopeFrame.Type.BLOCK);
 	public int elapsedTime = 0;
 	public int totalPowerConsumption = 0;
-	public Map<Integer, Integer> powerConsumption = new LinkedHashMap<>();
-	public Map<Integer, List<ArithmeticConstant>> outputs = new LinkedHashMap<>();
+	public Map<Integer, Pair<Integer, List<ArithmeticConstant>>> observations = new LinkedHashMap<>();
 	
 	public static ProgramExecutionContext initialContext(Program program) {
 		ProgramExecutionContext context = new ProgramExecutionContext();
@@ -77,9 +77,13 @@ public class ProgramExecutionContext implements Cloneable {
 		clonedContext.initialVariableBindings = initialVariableBindings.clone();
 		clonedContext.elapsedTime = elapsedTime;
 		clonedContext.totalPowerConsumption = totalPowerConsumption;
-		clonedContext.powerConsumption.putAll(powerConsumption);
-		// we can shallow-clone ArithmeticConstant objects, because they're never supposed to change
-		outputs.entrySet().stream().forEach(x -> clonedContext.outputs.put(x.getKey(), new LinkedList<>(x.getValue())));
+		observations.entrySet().stream().forEach(x -> {
+			clonedContext.observations.put(
+				x.getKey(),
+				// we can shallow-clone ArithmeticConstant objects, because they're never supposed to change
+				new Pair<>(x.getValue().getValue0(), new LinkedList<>(x.getValue().getValue1()))
+			);
+		});
 		
 		return clonedContext;
 	}
@@ -88,14 +92,14 @@ public class ProgramExecutionContext implements Cloneable {
 		return DigestUtils.md5Hex(toString());
 	}
 	
-	public String outputsToString() {
-		return outputs.keySet().stream()
+	public String observationsToString() {
+		return observations.keySet().stream()
 			.map(t ->
-				t + "=[" +
-				outputs.get(t).stream()
+				t + "=[p=" + observations.get(t).getValue0() + ",o=<" +
+				observations.get(t).getValue1().stream()
 					.map(ac -> ac.toSourceString())
 					.collect(Collectors.joining(",")) +
-				"]")
+				">]")
 			.collect(Collectors.joining(","));
 	}
 	
@@ -148,13 +152,13 @@ public class ProgramExecutionContext implements Cloneable {
 		s.append("\n");
 		
 		s.append(indentation(indent + 1));
-		s.append("powerConsumption: {");
-		s.append(powerConsumption.keySet().stream().map(t -> t + "=" + powerConsumption.get(t)).collect(Collectors.joining(",")));
-		s.append("}\n");
-		
-		s.append(indentation(indent + 1));
-		s.append("outputs: {");
-		s.append(outputs.keySet().stream().map(t -> t + "=[" + outputs.get(t).stream().map(ac -> ac.toSourceString()).collect(Collectors.joining(",")) + "]").collect(Collectors.joining(",")));
+		s.append("observations: {");
+		s.append(observations.keySet().stream()
+			.map(t -> t + "=[p=" + observations.get(t).getValue0() + ",o=<" + observations.get(t).getValue1().stream()
+				.map(ac -> ac.toSourceString())
+				.collect(Collectors.joining(","))
+				+ ">]")
+			.collect(Collectors.joining(",")));
 		s.append("}\n");
 		
 		s.append(indentation(indent));

@@ -31,7 +31,7 @@ public class PRISMModelGenerator implements ModelGenerator {
 	// the indices of various pieces of information in the prism State object's variables array; cumulative elapsed time
 	// and consumed power are only present as variables if stateTime and statePower respectively are set to true in the
 	// call to the constructor, otherwise they will be omitted and their indices will be -1
-	private int stateOutputIDIndex = 1;
+	private int stateObservationsIDIndex = 1;
 	private int stateTimeIndex = -1;
 	private int statePowerIndex = -1;
 	
@@ -48,10 +48,10 @@ public class PRISMModelGenerator implements ModelGenerator {
 	// a reverse map for schimpExecutionContexts, but based on (much shorter) hashes of ProgramExecutionContext strings
 	private Map<String, Integer> schimpExecutionContextHashes = new HashMap<>();
 	
-	// a map from unique (stringified) lists of schimp program outputs to ids, and another map for the reverse
-	private Map<String, Integer> schimpExecutionContextOutputListIDs = new HashMap<>();
-	private Map<Integer, String> schimpExecutionContextOutputLists = new HashMap<>();
-	private int lastOutputListID = 0;
+	// a map from unique (stringified) schimp program observations to ids, and another map for the reverse
+	private Map<String, Integer> schimpExecutionContextObservationsIDs = new HashMap<>();
+	private Map<Integer, String> schimpExecutionContextObservations = new HashMap<>();
+	private int lastObservationsID = 0;
 	
 	// the prism State object that is currently being explored
 	private State exploringState;
@@ -80,7 +80,7 @@ public class PRISMModelGenerator implements ModelGenerator {
 		int varIndex = 1; // 0 = "_cid", 1 = "_oid"; always present
 		// - the unique id representing the ProgramExecutionContext associated with this State
 		prismVarNames.add("_cid");
-		// - the unique id representing the list of outputs observed so far from the schimp program
+		// - the unique id representing the observations so far
 		prismVarNames.add("_oid");
 		// - the cumulative elapsed time of the schimp program (if stateTime is true)
 		if (stateTime) {
@@ -110,8 +110,8 @@ public class PRISMModelGenerator implements ModelGenerator {
 		return program;
 	}
 	
-	public int getStateOutputIDIndex() {
-		return stateOutputIDIndex;
+	public int getStateObservationsIDIndex() {
+		return stateObservationsIDIndex;
 	}
 	
 	public boolean stateHasTime() {
@@ -150,8 +150,8 @@ public class PRISMModelGenerator implements ModelGenerator {
 	// the prism State object representing a schimp program execution contains the following variables (all integers):
 	// - "_cid": a unique id that maps to a ProgramExecutionContext object (stored in schimpExecutionContexts)
 	//           describing the state of the schimp program in more detail
-	// - "_oid": a unique id representing a (stringified) list of outputs (stored in schimpExecutionContextOutputLists)
-	//           observed so far from the schimp program
+	// - "_oid": a unique id representing (stringified) observations (stored in schimpExecutionContextObservations)
+	//           that the schimp program has produced so far
 	// - "_time": the cumulative elapsed time of the schimp program (if stateTime is true)
 	// - "_power": the cumulative power consumption of the schimp program (if statePower is true)
 	// - "i1".."in": one variable representing the value of each initial variable declared in the schimp program whose
@@ -367,7 +367,7 @@ public class PRISMModelGenerator implements ModelGenerator {
 		// - "[cid]"
 		state.setValue(nextIndex++, contextID);
 		// - "[oid]"
-		state.setValue(nextIndex++, getOutputListID(context.outputsToString()));
+		state.setValue(nextIndex++, getObservationsID(context.observationsToString()));
 		// - "[time]" (if stateTime is true)
 		if (stateTimeIndex != -1) state.setValue(nextIndex++, context.elapsedTime);
 		// - "[power]" (if statePower is true)
@@ -399,17 +399,17 @@ public class PRISMModelGenerator implements ModelGenerator {
 		}
 	}
 	
-	public String getOutputList(int outputListID) {
-		return schimpExecutionContextOutputLists.get(outputListID);
+	public String getObservations(int observationsID) {
+		return schimpExecutionContextObservations.get(observationsID);
 	}
 	
-	private int getOutputListID(String outputList) {
-		if (schimpExecutionContextOutputListIDs.containsKey(outputList)) {
-			return schimpExecutionContextOutputListIDs.get(outputList);
+	private int getObservationsID(String observationsString) {
+		if (schimpExecutionContextObservationsIDs.containsKey(observationsString)) {
+			return schimpExecutionContextObservationsIDs.get(observationsString);
 		} else {
-			schimpExecutionContextOutputListIDs.put(outputList, ++lastOutputListID);
-			schimpExecutionContextOutputLists.put(lastOutputListID, outputList);
-			return lastOutputListID;
+			schimpExecutionContextObservationsIDs.put(observationsString, ++lastObservationsID);
+			schimpExecutionContextObservations.put(lastObservationsID, observationsString);
+			return lastObservationsID;
 		}
 	}
 	

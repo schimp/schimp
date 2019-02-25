@@ -129,7 +129,7 @@ public class CommandLine {
 			prismAttackerGuesses.initialise();
 			prismAttackerGuesses.setEngine(Prism.EXPLICIT);
 			prismAttackerGuesses.getSettings().set(PrismSettings.PRISM_SORT_STATES, false);
-			prismAttackerGuesses.getSettings().set(PrismSettings.PRISM_GRID_RESOLUTION, 6);
+			prismAttackerGuesses.getSettings().set(PrismSettings.PRISM_GRID_RESOLUTION, 16);
 		} catch (PrismException e) {
 			e.printStackTrace();
 			System.exit(1);
