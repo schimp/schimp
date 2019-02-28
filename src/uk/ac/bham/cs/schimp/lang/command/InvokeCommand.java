@@ -110,11 +110,15 @@ public class InvokeCommand extends Command {
 				nonAtomicSucceedingContext.elapsedTime += tp.getValue0();
 				nonAtomicSucceedingContext.totalPowerConsumption += tp.getValue1();
 				
-				Pair<Integer, List<ArithmeticConstant>> currentObservations = nonAtomicSucceedingContext.observations.computeIfAbsent(
-					nonAtomicSucceedingContext.elapsedTime,
-					i -> new Pair<>(nonAtomicSucceedingContext.totalPowerConsumption, new LinkedList<>())
-				);
-				currentObservations.setAt0(nonAtomicSucceedingContext.totalPowerConsumption);
+				// when a function is invoked, the program observations only need to be updated if invocation of this
+				// function consumes power
+				if (tp.getValue1() > 0) {
+					Pair<Integer, List<ArithmeticConstant>> currentObservations = nonAtomicSucceedingContext.observations.computeIfAbsent(
+						nonAtomicSucceedingContext.elapsedTime,
+						i -> new Pair<>(nonAtomicSucceedingContext.totalPowerConsumption, new LinkedList<>())
+					);
+					currentObservations.setAt0(nonAtomicSucceedingContext.totalPowerConsumption);
+				}
 				
 				succeedingPMF.add(nonAtomicSucceedingContext, powerConsumptionPMF.probabilityOf(tp));
 			}

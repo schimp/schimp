@@ -1,12 +1,16 @@
 package uk.ac.bham.cs.schimp.lang.command;
 
 import java.util.Arrays;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import org.javatuples.Pair;
 
 import uk.ac.bham.cs.schimp.ProbabilityMassFunction;
 import uk.ac.bham.cs.schimp.exec.ProgramExecutionContext;
 import uk.ac.bham.cs.schimp.exec.ProgramExecutionException;
+import uk.ac.bham.cs.schimp.lang.expression.arith.ArithmeticConstant;
 import uk.ac.bham.cs.schimp.lang.expression.arith.ArithmeticExpression;
 import uk.ac.bham.cs.schimp.source.SyntaxCheckContext;
 import uk.ac.bham.cs.schimp.source.SyntaxException;
@@ -29,7 +33,14 @@ public class OutputCommand extends Command {
 	public ProbabilityMassFunction<ProgramExecutionContext> execute(ProgramExecutionContext context) throws ProgramExecutionException {
 		ProgramExecutionContext succeedingContext = context.clone();
 		
-		exps.stream().forEachOrdered(e -> succeedingContext.observations.get(succeedingContext.elapsedTime).getValue1().add(e.evaluate(succeedingContext)));
+		// when an output command is executed, the values need to be associated in the program observations with the
+		// current time point, which may not exist as an observation if no additional power has been consumed since the
+		// previous time point
+		List<ArithmeticConstant> currentOutputs = succeedingContext.observations.computeIfAbsent(
+			succeedingContext.elapsedTime,
+			i -> new Pair<>(succeedingContext.totalPowerConsumption, new LinkedList<>())
+		).getValue1();
+		exps.stream().forEachOrdered(e -> currentOutputs.add(e.evaluate(succeedingContext)));
 		
 		if (destroyBlockScopeFrames > 0) succeedingContext.destroyBlockScopeFrames(destroyBlockScopeFrames);
 		succeedingContext.setNextCommand(nextCommand);
