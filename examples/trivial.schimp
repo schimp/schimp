@@ -1,8 +1,8 @@
-initial h := { 0 -> 1/2, 1 -> 1/2 };
+initial i := { 0 -> 1/2, 1 -> 1/2 };
 
-function main() {
-	new l := { 0 -> 1/2, 1 -> 1/2 };
-	output l
+function f() {
+	new x := { 0 -> 1/2, 1 -> 1/2 };
+	output x
 };
 
-main()
+f()
