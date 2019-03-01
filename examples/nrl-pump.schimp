@@ -1,0 +1,150 @@
+# The value that the high-security node tries to communicate to the low-security
+# node over a covert channel through the NRL pump
+initial h := { 0 -> 1/2, 1 -> 1/2 };
+
+# The high-security node waits h0 units of time to communicate the fact that
+# h = 0, or h1 units of time to communicate the fact that h = 1
+new h0 := 2;
+new h1 := 5;
+
+new ack_timeout := 10;
+new max_messages := 3;
+
+# The elapsed units of time for processing the round trip of a single message
+# (low -> pump -> high -> pump -> low); this is reset to 0 whenever low begins
+# sending a new message
+new ack_clock := 0;
+
+new global_clock := 0;
+
+# The elapsed units of time for processing the round trips of all messages; this
+# can be used to enforce an upper bound on the total amount of time high has to
+# leak h to low. Set to an integer larger than ack_timeout * max_messages to
+# avoid doing this
+new global_timeout := 1000;
+
+# Run the protocol for sending a message from the low-security node to the
+# high-security node via the pump:
+# low -> pump: message
+# pump -> high: message
+# high -> pump: ack
+# pump: probabilistic delay
+# pump -> low: ack
+function run() {
+	# The actual message being sent from low to high doesn't matter: high will
+	# attempt to leak the value of h regardless
+	low_to_pump(0)
+};
+
+
+# From the low-security node's perspective:
+# - Send a message to the high-security node
+# - Wait for an ack from the pump; if no ack arrives within <ack_timeout> units
+#   of time, or if <global_timeout> units of time elapse, the operation times
+#   out
+# - Repeat a maximum of <max_messages> times
+function low_to_pump(msg) {
+	new messages_sent := 0;
+	
+	# This becomes set to 1 when low becomes aware of the value of h that high
+	# was attempting to leak through the pump
+	new h_received := 0;
+	
+	while ((h_received == 0) and (messages_sent < max_messages) and (global_clock < global_timeout)) {
+		ack_clock := 0;
+		
+		pump_low_to_high(msg);
+		
+		# If the pump responds with an ack within <ack_timeout> units of time,
+		# the message was sent; otherwise, assume failure
+		if ((ack_clock < ack_timeout) and (global_clock < global_timeout)) {
+			h_received := 1;
+			protocol_record(100)
+		} else {
+			protocol_record(999)
+		};
+		
+		messages_sent := messages_sent + 1
+	}
+};
+
+# From the pump's perspective:
+# - Receive a message from the low-security node
+# - Send it to the high-security node
+# - Wait for an ack from the high-security node
+# - Insert a probabilistic delay
+# - Send an ack to the low-security node
+function pump_low_to_high(msg) {
+	if (global_clock < global_timeout) {
+		#protocol_record(101);
+		high_ack(msg);
+		pump_high_to_low(msg)
+	} else {
+		skip
+	}
+};
+function pump_high_to_low(msg) {
+	if (global_clock < global_timeout) {
+		# Wait for a number of units of time based on the average amount of time
+		# taken for high to send its ack; if this causes ack_timeout or
+		# global_timeout to be exceeded, abandon the operation
+		new ack_sent := 0;
+		while ((ack_sent == 0) and (ack_clock < ack_timeout) and (global_clock < global_timeout)) {
+			if (h == 0) {
+				ack_sent := {
+					0 -> 1 - 1/h0,
+					1 -> 1/h0
+				}
+			} else {
+				ack_sent := {
+					0 -> 1 - 1/h1,
+					1 -> 1/h1
+				}
+			};
+			
+			run_clock(1)
+		};
+		
+		# By this point, either ack_sent == 1 (signifying that an ack has been
+		# sent to low), or ack_clock == timeout (signifying that the ack has
+		# taken too long to be sent, in which case low will attempt to resend
+		# the message, as long as global_timeout hasn't been exceeded)
+		
+		protocol_record(103)
+	} else {
+		skip
+	}
+};
+
+# From the high-security node's perspective:
+# - Receive a message from the pump
+# - Wait a certain number of units of time to leak the value of h (either h0 or
+#   h1, depending on the value of h)
+# - Send an ack to the pump
+function high_ack(msg) {
+	if (global_clock < global_timeout) {
+		if (h == 0) {
+			run_clock(h0)
+		} else {
+			run_clock(h1)
+		}
+		
+		#protocol_record(102)
+	} else {
+		skip
+	}
+};
+
+#==============================================================================#
+
+function protocol_record(x) {
+	skip;
+	output x
+};
+
+function run_clock(t) {
+	ack_clock := ack_clock + t;
+	global_clock := global_clock + t
+};
+
+run()
