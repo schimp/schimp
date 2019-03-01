@@ -22,6 +22,7 @@ import prism.PrismException;
 import prism.PrismFileLog;
 import prism.PrismLog;
 import prism.PrismSettings;
+import prism.Result;
 import uk.ac.bham.cs.schimp.exec.graphviz.AttackerModelStateDecorator;
 import uk.ac.bham.cs.schimp.exec.graphviz.SCHIMPModelStateDecorator;
 import uk.ac.bham.cs.schimp.lang.Program;
@@ -129,7 +130,7 @@ public class CommandLine {
 			prismAttackerGuesses.initialise();
 			prismAttackerGuesses.setEngine(Prism.EXPLICIT);
 			prismAttackerGuesses.getSettings().set(PrismSettings.PRISM_SORT_STATES, false);
-			prismAttackerGuesses.getSettings().set(PrismSettings.PRISM_GRID_RESOLUTION, 16);
+			prismAttackerGuesses.getSettings().set(PrismSettings.PRISM_GRID_RESOLUTION, 8);
 		} catch (PrismException e) {
 			e.printStackTrace();
 			System.exit(1);
@@ -171,7 +172,12 @@ public class CommandLine {
 			System.out.print( "check> " );
 			while ((in = stdinReader.readLine()) != null) {
 				try {
-					System.out.println(prismAttackerGuesses.modelCheck(in).getResult());
+					Result result = prismAttackerGuesses.modelCheck(in);
+					if (result.getStrategy() != null) {
+						result.getStrategy().exportActions(prismStdout);
+					} else {
+						System.out.println("No attacker strategy provided by PRISM");
+					}
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
