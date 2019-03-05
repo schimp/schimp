@@ -1,0 +1,16 @@
+model moveN/1 := {
+	(_) -> (1, 1)
+};
+model moveS/1 := {
+	(_) -> (1, 1)
+};
+model moveW/1 := {
+	(_) -> (1, 1)
+};
+model moveE/1 := {
+	(_) -> (1, 1)
+};
+
+model drift/1 := {
+	(_) -> (1, 0)
+}

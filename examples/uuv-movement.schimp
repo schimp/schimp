@@ -1,0 +1,124 @@
+# Coordinates of the UUV's target
+initial target_x := 4;
+initial target_y := 4;
+
+# Coordinates of the UUV
+new x := 0;
+new y := 0;
+
+# The direction of the water's current
+# 0 = none, 1 = moving north, 2, moving east, 3 = moving south, 4 = moving west
+new current := 0;
+
+# The current state of the UUV's location sensor
+# 0 = failed, 1 = correctly operational
+new locationSensor := 1;
+
+# Move the UUV in a particular direction; this costs t units of time and e units
+# of energy for each unit of distance travelled along one axis, where:
+# t = 1 and e = 1 if the UUV moves with the water's current
+# t = 2 and e = 2 if there is no current
+# t = 3 and e = 3 if the UUV moves against the water's current
+function moveN(c) { y := y + 1; output x, y };
+function moveS(c) { y := y - 1; output x, y };
+function moveW(c) { x := x - 1; output x, y };
+function moveE(c) { x := x + 1; output x, y };
+
+# Cause the UUV to drift in a particular direction due to the water's current;
+# this costs 1 unit of time for each unit of distance drifted along one axis
+function driftN() { y := y + 1 };
+function driftS() { y := y - 1 };
+function driftW() { x := x - 1 };
+function driftE() { x := x + 1 };
+function drift() {
+	if (current == 1) { driftN() };
+	if (current == 2) { driftE() };
+	if (current == 3) { driftS() };
+	if (current == 4) { driftW() };
+	output x, y
+};
+
+# Move the UUV from its current location to the coordinates of its target
+function moveToTarget() {
+	# Keep track of the number of times the UUV has moved while the water has
+	# had a current - the current will stop after the UUV has moved 10 times, to
+	# stop the model's state space from getting out of control
+	new currentTime := 0;
+
+	while (not (x == target_x and y == target_y)) {
+		# If the UUV's location sensor has failed, the UUV's perception of its
+		# current X and Y coordinate will be approximately normally distributed
+		# +/- 1 distance unit
+		new perceived_x := x;
+		new perceived_y := y;
+		if (locationSensor == 0) {
+			perceived_x := {
+				x - 1 -> 0.25,
+				x -> 0.5,
+				x + 1 -> 0.25
+			};
+			perceived_y := {
+				y - 1 -> 0.25,
+				y -> 0.5,
+				y + 1 -> 0.25
+			}
+		};
+		
+		# Decide which axis the UUV should move along, depending on whether the
+		# UUV has already reached its target on one of the axes
+		# 1 = move along the x axis, 2 = move along the y axis
+		new moveOnAxis := 0;
+		if (perceived_x == target_x) {
+			moveOnAxis := 2
+		} else {
+			if (perceived_y == target_y) {
+				moveOnAxis := 1
+			} else {
+				moveOnAxis := { 1 -> 0.5, 2 -> 0.5 }
+			}
+		};
+		
+		# Decide where the UUV should move based on what it perceives as its
+		# current location, accounting for the fact that the UUV can move in a
+		# favoured direction for "free" if the water's current is moving in that
+		# direction
+		if (moveOnAxis == 1) {
+			if (perceived_x < target_x) {
+				if (not (current == 2)) { moveE(current) }
+			} else {
+				if (perceived_x > target_x) {
+					if (not (current == 4)) { moveW(current) }
+				}
+			}
+		} else {
+			if (perceived_y < target_y) {
+				if (not (current == 1)) { moveN(current) }
+			} else {
+				if (perceived_y > target_y) {
+					if (not (current == 3)) { moveS(current) }
+				}
+			}
+		};
+		
+		# If there is a current, cause the UUV to drift depending on the
+		# direction of the current; there is a 20% chance that any current in
+		# the water then stops
+		if (not (current == 0)) {
+			drift();
+			currentTime := currentTime + 1;
+			if (currentTime == 10) {
+				current := 0
+			} else {
+				new currentNext := { 0 -> 0.2, 1 -> 0.8 };
+				if (currentNext == 0) { current := 0 }
+			}
+		};
+		
+		# There is a 1% chance that the UUV's location sensor fails now
+		if (locationSensor == 1) {
+			locationSensor := { 0 -> 0.01, 1 -> 0.99 }
+		}
+	}
+};
+
+moveToTarget()
