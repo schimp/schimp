@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.stream.Collectors;
 
-import org.apache.commons.math3.fraction.Fraction;
+import org.apache.commons.math3.fraction.BigFraction;
 import org.javatuples.Pair;
 
 import uk.ac.bham.cs.schimp.ProbabilityMassFunction;
@@ -20,7 +20,7 @@ public class FunctionModel extends Syntax {
 	
 	static {
 		noConsumptionPMF = new ProbabilityMassFunction<>();
-		noConsumptionPMF.add(new Pair<Integer, Integer>(0, 0), new Fraction(1));
+		noConsumptionPMF.add(new Pair<Integer, Integer>(0, 0), new BigFraction(1));
 	}
 	
 	private String name;

@@ -3,7 +3,7 @@ package uk.ac.bham.cs.schimp.lang.command;
 import java.util.Iterator;
 import java.util.stream.Collectors;
 
-import org.apache.commons.math3.fraction.Fraction;
+import org.apache.commons.math3.fraction.BigFraction;
 
 import uk.ac.bham.cs.schimp.ProbabilityMassFunction;
 import uk.ac.bham.cs.schimp.exec.EvaluationException;
@@ -82,7 +82,7 @@ public class NewCommand extends VariableAssignmentCommand {
 		pmf.elements().stream().forEach(e -> {
 			ProgramExecutionContext succeedingContext = context.clone();
 			
-			Fraction succeedingContextProbability;
+			BigFraction succeedingContextProbability;
 			try {
 				succeedingContext.variableBindings.define(v.getName(), e.evaluate(succeedingContext));
 				succeedingContextProbability = pmf.probabilityOf(e).evaluate(context).toFraction();

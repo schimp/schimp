@@ -11,7 +11,7 @@ import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.TokenStream;
-import org.apache.commons.math3.fraction.Fraction;
+import org.apache.commons.math3.fraction.BigFraction;
 import org.javatuples.Pair;
 
 import uk.ac.bham.cs.schimp.ProbabilityMassFunction;
@@ -142,7 +142,7 @@ public class FunctionModelSourceFile extends FunctionModelSource {
 				.collect(Collectors.toList());
 			
 			RationalVisitor rationalVisitor = new RationalVisitor();
-			List<Fraction> rationals = ctx.rational().stream()
+			List<BigFraction> rationals = ctx.rational().stream()
 				.map(c -> c.accept(rationalVisitor))
 				.collect(Collectors.toList());
 			
@@ -177,59 +177,59 @@ public class FunctionModelSourceFile extends FunctionModelSource {
 		}
 	}
 	
-	private static class RationalVisitor extends SCHIMPFunctionModelBaseVisitor<Fraction> {
+	private static class RationalVisitor extends SCHIMPFunctionModelBaseVisitor<BigFraction> {
 		@Override
-		public Fraction visitRationalParens(SCHIMPFunctionModelParser.RationalParensContext ctx) {
+		public BigFraction visitRationalParens(SCHIMPFunctionModelParser.RationalParensContext ctx) {
 			RationalVisitor rationalVisitor = new RationalVisitor();
 			
-			Fraction aconst = ctx.rational().accept(rationalVisitor);
+			BigFraction aconst = ctx.rational().accept(rationalVisitor);
 			return aconst;
 		}
 		
 		@Override
-		public Fraction visitRationalMultiply(SCHIMPFunctionModelParser.RationalMultiplyContext ctx) {
+		public BigFraction visitRationalMultiply(SCHIMPFunctionModelParser.RationalMultiplyContext ctx) {
 			RationalVisitor rationalVisitor = new RationalVisitor();
 			
-			Fraction left = ctx.rational(0).accept(rationalVisitor);
-			Fraction right = ctx.rational(1).accept(rationalVisitor);
+			BigFraction left = ctx.rational(0).accept(rationalVisitor);
+			BigFraction right = ctx.rational(1).accept(rationalVisitor);
 			
 			return left.multiply(right);
 		}
 		
 		@Override
-		public Fraction visitRationalDivide(SCHIMPFunctionModelParser.RationalDivideContext ctx) {
+		public BigFraction visitRationalDivide(SCHIMPFunctionModelParser.RationalDivideContext ctx) {
 			RationalVisitor rationalVisitor = new RationalVisitor();
 			
-			Fraction left = ctx.rational(0).accept(rationalVisitor);
-			Fraction right = ctx.rational(1).accept(rationalVisitor);
+			BigFraction left = ctx.rational(0).accept(rationalVisitor);
+			BigFraction right = ctx.rational(1).accept(rationalVisitor);
 			
 			return left.divide(right);
 		}
 		
 		@Override
-		public Fraction visitRationalAdd(SCHIMPFunctionModelParser.RationalAddContext ctx) {
+		public BigFraction visitRationalAdd(SCHIMPFunctionModelParser.RationalAddContext ctx) {
 			RationalVisitor rationalVisitor = new RationalVisitor();
 			
-			Fraction left = ctx.rational(0).accept(rationalVisitor);
-			Fraction right = ctx.rational(1).accept(rationalVisitor);
+			BigFraction left = ctx.rational(0).accept(rationalVisitor);
+			BigFraction right = ctx.rational(1).accept(rationalVisitor);
 			
 			return left.add(right);
 		}
 		
 		@Override
-		public Fraction visitRationalSubtract(SCHIMPFunctionModelParser.RationalSubtractContext ctx) {
+		public BigFraction visitRationalSubtract(SCHIMPFunctionModelParser.RationalSubtractContext ctx) {
 			RationalVisitor rationalVisitor = new RationalVisitor();
 			
-			Fraction left = ctx.rational(0).accept(rationalVisitor);
-			Fraction right = ctx.rational(1).accept(rationalVisitor);
+			BigFraction left = ctx.rational(0).accept(rationalVisitor);
+			BigFraction right = ctx.rational(1).accept(rationalVisitor);
 			
 			return left.subtract(right);
 		}
 		
 		@Override
-		public Fraction visitRationalInteger(SCHIMPFunctionModelParser.RationalIntegerContext ctx) {
+		public BigFraction visitRationalInteger(SCHIMPFunctionModelParser.RationalIntegerContext ctx) {
 			// TODO: this must be an integer, throw exception if not
-			return new Fraction(Integer.parseInt(ctx.getText()));
+			return new BigFraction(Integer.parseInt(ctx.getText()));
 		}
 	}
 	

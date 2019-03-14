@@ -23,15 +23,17 @@ cmd : cmdnew    # New
     ;
 
 // arithmetic expressions
-aexp : '(' aexp ')'    # AexpParens
-     | aexp '*' aexp   # AexpMultiply
-     | aexp '/' aexp   # AexpDivide
-     | aexp '+' aexp   # AexpAdd
-     | aexp '-' aexp   # AexpSubtract
-     | aexp 'mod' aexp # AexpModulo
-     | aexp 'xor' aexp # AexpXor
-     | IDENTIFIER      # AexpVarname
-     | INTEGER         # AexpConst
+aexp : '(' aexp ')'           # AexpParens
+     | <assoc=right> 'floor' aexp # AexpFloor
+     | aexp '^' aexp          # AexpExponent
+     | aexp '*' aexp          # AexpMultiply
+     | aexp '/' aexp          # AexpDivide
+     | aexp '+' aexp          # AexpAdd
+     | aexp '-' aexp          # AexpSubtract
+     | aexp 'mod' aexp        # AexpModulo
+     | aexp 'xor' aexp        # AexpXor
+     | IDENTIFIER             # AexpVarname
+     | INTEGER                # AexpConst
      ;
 
 // boolean expressions

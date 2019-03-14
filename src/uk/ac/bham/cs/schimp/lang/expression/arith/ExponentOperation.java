@@ -1,5 +1,7 @@
 package uk.ac.bham.cs.schimp.lang.expression.arith;
 
+import java.math.BigInteger;
+
 import org.apache.commons.math3.fraction.BigFraction;
 
 import uk.ac.bham.cs.schimp.exec.EvaluationException;
@@ -8,12 +10,12 @@ import uk.ac.bham.cs.schimp.exec.VariableScopeFrame;
 import uk.ac.bham.cs.schimp.source.SyntaxCheckContext;
 import uk.ac.bham.cs.schimp.source.SyntaxException;
 
-public class ModuloOperation extends ArithmeticExpression {
+public class ExponentOperation extends ArithmeticExpression {
 	
 	private ArithmeticExpression left;
 	private ArithmeticExpression right;
 	
-	public ModuloOperation(ArithmeticExpression left, ArithmeticExpression right) {
+	public ExponentOperation(ArithmeticExpression left, ArithmeticExpression right) {
 		super();
 		this.left = left;
 		this.right = right;
@@ -28,35 +30,23 @@ public class ModuloOperation extends ArithmeticExpression {
 	@Override
 	public ArithmeticConstant evaluate(ProgramExecutionContext context) throws EvaluationException {
 		BigFraction leftFraction = left.evaluate(context).toFraction();
-		BigFraction rightFraction = right.evaluate(context).toFraction();
-		return new ArithmeticConstant(
-			leftFraction.subtract(
-				rightFraction.multiply(
-					leftFraction.divide(rightFraction).intValue()
-				)
-			)
-		);
+		BigInteger rightAsInteger = new BigInteger(Integer.toString(right.evaluate(context).toFraction().intValue()));
+		return new ArithmeticConstant(leftFraction.pow(rightAsInteger));
 	}
 	
 	@Override
 	public ArithmeticConstant evaluate(VariableScopeFrame frame) throws EvaluationException {
 		BigFraction leftFraction = left.evaluate(frame).toFraction();
-		BigFraction rightFraction = right.evaluate(frame).toFraction();
-		return new ArithmeticConstant(
-			leftFraction.subtract(
-				rightFraction.multiply(
-					leftFraction.divide(rightFraction).intValue()
-				)
-			)
-		);
+		BigInteger rightAsInteger = new BigInteger(Integer.toString(right.evaluate(frame).toFraction().intValue()));
+		return new ArithmeticConstant(leftFraction.pow(rightAsInteger));
 	}
 	
 	public String toString(int indent) {
-		return indentation(indent) + "(" + left.toString() + " mod " + right.toString() + ")";
+		return indentation(indent) + "(" + left.toString() + " ^ " + right.toString() + ")";
 	}
 	
 	public String toSourceString(int indent) {
-		return indentation(indent) + "(" + left.toSourceString() + " mod " + right.toSourceString() + ")";
+		return indentation(indent) + "(" + left.toSourceString() + " ^ " + right.toSourceString() + ")";
 	}
 	
 }

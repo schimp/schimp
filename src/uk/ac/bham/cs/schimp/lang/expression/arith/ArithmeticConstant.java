@@ -1,6 +1,6 @@
 package uk.ac.bham.cs.schimp.lang.expression.arith;
 
-import org.apache.commons.math3.fraction.Fraction;
+import org.apache.commons.math3.fraction.BigFraction;
 
 import uk.ac.bham.cs.schimp.exec.ProgramExecutionContext;
 import uk.ac.bham.cs.schimp.exec.VariableScopeFrame;
@@ -9,16 +9,16 @@ import uk.ac.bham.cs.schimp.source.SyntaxException;
 
 public class ArithmeticConstant extends ArithmeticExpression {
 	
-	private Fraction constant;
+	private BigFraction constant;
 	
-	public ArithmeticConstant(Fraction constant) {
+	public ArithmeticConstant(BigFraction constant) {
 		super();
 		this.constant = constant;
 	}
 	
 	public ArithmeticConstant(int integer) {
 		super();
-		this.constant = new Fraction(integer);
+		this.constant = new BigFraction(integer);
 	}
 	
 	@Override
@@ -35,10 +35,10 @@ public class ArithmeticConstant extends ArithmeticExpression {
 	}
 	
 	public ArithmeticConstant clone() {
-		return new ArithmeticConstant(new Fraction(constant.getNumerator(), constant.getDenominator()));
+		return new ArithmeticConstant(new BigFraction(constant.getNumerator(), constant.getDenominator()));
 	}
 	
-	public Fraction toFraction() {
+	public BigFraction toFraction() {
 		return constant;
 	}
 	

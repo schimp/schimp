@@ -281,6 +281,24 @@ public class SourceFile {
 		}
 		
 		@Override
+		public ArithmeticExpression visitAexpFloor(SCHIMPParser.AexpFloorContext ctx) {
+			ArithmeticExpressionVisitor aexpVisitor = new ArithmeticExpressionVisitor();
+			
+			FloorOperation op = new FloorOperation(ctx.aexp().accept(aexpVisitor));
+			op.setSourceRange(contextToSourceRange(ctx));
+			return op;
+		}
+		
+		@Override
+		public ArithmeticExpression visitAexpExponent(SCHIMPParser.AexpExponentContext ctx) {
+			ArithmeticExpressionVisitor aexpVisitor = new ArithmeticExpressionVisitor();
+			
+			ExponentOperation op = new ExponentOperation(ctx.aexp(0).accept(aexpVisitor), ctx.aexp(1).accept(aexpVisitor));
+			op.setSourceRange(contextToSourceRange(ctx));
+			return op;
+		}
+		
+		@Override
 		public ArithmeticExpression visitAexpMultiply(SCHIMPParser.AexpMultiplyContext ctx) {
 			ArithmeticExpressionVisitor aexpVisitor = new ArithmeticExpressionVisitor();
 			

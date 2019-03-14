@@ -131,6 +131,8 @@ public class CommandLine {
 			prismAttackerGuesses.setEngine(Prism.EXPLICIT);
 			prismAttackerGuesses.getSettings().set(PrismSettings.PRISM_SORT_STATES, false);
 			prismAttackerGuesses.getSettings().set(PrismSettings.PRISM_GRID_RESOLUTION, 8);
+			//prismAttackerGuesses.getSettings().set(PrismSettings.PRISM_EXPORT_ADV, "MDP");
+			//prismAttackerGuesses.getSettings().set(PrismSettings.PRISM_EXPORT_ADV_FILENAME, "examples/adv.tra");
 		} catch (PrismException e) {
 			e.printStackTrace();
 			System.exit(1);
