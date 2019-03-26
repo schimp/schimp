@@ -63,6 +63,9 @@ public class PRISMModelGenerator implements ModelGenerator {
 	private Map<Integer, Integer> stateTimeConsumptions = new HashMap<>();
 	private Map<Integer, Integer> statePowerConsumptions = new HashMap<>();
 	
+	private Map<Integer, Integer> stateTimeSteps = new HashMap<>();
+	private int maximumTimeStep = 1;
+	
 	// the names of the variables defined in each prism State object
 	private List<String> prismVarNames = new ArrayList<String>();
 	
@@ -136,6 +139,10 @@ public class PRISMModelGenerator implements ModelGenerator {
 	
 	public ProgramExecutionContext getSCHIMPExecutionContext(int i) {
 		return schimpExecutionContexts.get(i);
+	}
+	
+	public int getMaximumTimeStep() {
+		return maximumTimeStep;
 	}
 	
 	//==========================================================================
@@ -263,7 +270,9 @@ public class PRISMModelGenerator implements ModelGenerator {
 	public State getInitialState() throws PrismException {
 		// this method is expected to return a fresh copy of the initial state, so create a new ProgramExecutionContext
 		// object to tie to the prism State object
-		return createStateFromProgramExecutionContextID(getProgramExecutionContextID(ProgramExecutionContext.initialContext(program)));
+		int initialContextID = getProgramExecutionContextID(ProgramExecutionContext.initialContext(program));
+		stateTimeSteps.put(initialContextID, 1);
+		return createStateFromProgramExecutionContextID(initialContextID);
 	}
 	
 	@Override
@@ -340,12 +349,18 @@ public class PRISMModelGenerator implements ModelGenerator {
 			succeedingStates = new State[succeedingContextTotal];
 			succeedingStateProbabilities = new double[succeedingContextTotal];
 			
+			int succeedingStateTimeStep = stateTimeSteps.get(exploringContextID) + 1;
+			stateTimeSteps.remove(exploringContextID);
+			if (succeedingStateTimeStep > maximumTimeStep) maximumTimeStep = succeedingStateTimeStep;
+			
 			int index = 0;
 			for (ProgramExecutionContext c : succeedingContexts.elements()) {
 				int succeedingContextID = getProgramExecutionContextID(c);
 				
 				succeedingStates[index] = createStateFromProgramExecutionContextID(succeedingContextID);
 				succeedingStateProbabilities[index] = succeedingContexts.probabilityOf(c).doubleValue();
+				
+				stateTimeSteps.put(succeedingContextID, succeedingStateTimeStep);
 				
 				// for the state reward information, store the instantaneous (rather than cumulative) elapsed time and power
 				// consumption (i.e., the time elapsed and power consumed solely as a result of transitioning into this new

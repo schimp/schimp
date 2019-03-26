@@ -351,8 +351,7 @@ public class AttackerModelGenerator implements ModelGenerator {
 			//   schimp program from the model built by the PRISMModelGenerator
 			case 0:
 				DTMCModelChecker modelChecker = new DTMCModelChecker(prism);
-				// TODO: don't hardcode time horizon to 30 here
-				StateValues steadyState = modelChecker.doTransient((DTMC)prism.getBuiltModelExplicit(), 30);
+				StateValues steadyState = modelChecker.doTransient((DTMC)prism.getBuiltModelExplicit(), schimpModelGenerator.getMaximumTimeStep());
 				
 				// iterate over each of the terminating states in the generated prism model, and create new states for
 				// this model based on them; the variables in each state are the same with the exception of the first,
