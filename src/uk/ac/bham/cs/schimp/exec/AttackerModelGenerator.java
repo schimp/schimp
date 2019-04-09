@@ -186,6 +186,12 @@ public class AttackerModelGenerator implements ModelGenerator {
 		return stateInitialVarGuessesOffset;
 	}
 	
+	public String getPmaxProperty() {
+		return "Pmax=? [ F _phase=2&" +
+			stateInitialVars.stream().map(i -> "_correct_" + i + "=1").collect(Collectors.joining("&")) +
+			" ]";
+	}
+	
 	//==========================================================================
 	// the attacker's ability is modelled as a partially-observable markov decision process
 	

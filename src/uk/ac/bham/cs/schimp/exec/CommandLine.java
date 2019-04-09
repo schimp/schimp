@@ -1,9 +1,7 @@
 package uk.ac.bham.cs.schimp.exec;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -169,6 +167,19 @@ public class CommandLine {
 		}
 		
 		try {
+			Result result = prismAttackerGuesses.modelCheck(attackerModelGenerator.getPmaxProperty());
+			if (result.getStrategy() != null) {
+				result.getStrategy().exportActions(prismStdout);
+			} else {
+				System.out.println("No attacker strategy provided by PRISM");
+			}
+		} catch (PrismException e) {
+			e.printStackTrace();
+			System.exit(1);
+		}
+		
+		/*
+		try {
 			BufferedReader stdinReader = new BufferedReader(new InputStreamReader(System.in));
 			String in;
 			System.out.print( "check> " );
@@ -188,6 +199,7 @@ public class CommandLine {
 		} catch (IOException e) {
 			System.exit(0);
 		}
+		*/
 	}
 	
 	public static OptionParser getOptionParser() {
