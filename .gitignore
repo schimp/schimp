@@ -1,5 +1,7 @@
 # Files generated during compilation
 /bin/
+/build/
+/dist/
 /target/
 
 # DOT files generated for examples (and any files Graphviz generates based on

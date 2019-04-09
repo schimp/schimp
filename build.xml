@@ -1,0 +1,164 @@
+<project name="schimp" basedir="." default="build">
+	<property name="builddir" location="build"/>
+	<property name="distdir" location="dist"/>
+	<property name="extdir" location="ext"/>
+	<property name="libdir" location="lib"/>
+	<property name="srcdir" location="src"/>
+	<property name="gensrcdir" location="target/generated-sources"/>
+
+	<property name="sourcever" value="1.8"/>
+    <property name="targetver" value="1.8"/>
+    <property name="debuglevel" value="source,lines,vars"/>
+
+	<!-- Ant-Contrib -->
+	<taskdef resource="net/sf/antcontrib/antlib.xml">
+		<classpath>
+			<fileset dir="${extdir}/ant-contrib">
+				<include name="*.jar"/>
+			</fileset>
+		</classpath>
+	</taskdef>
+
+	<target name="clean" depends="build-clean"/>
+
+    <target name="build-clean">
+		<delete failonerror="false" includeemptydirs="true">
+			<fileset dir="${builddir}"/>
+			<fileset dir="${gensrcdir}"/>
+		</delete>
+	</target>
+
+    <target name="dist-clean">
+		<delete dir="${distdir}" failonerror="false"/>
+	</target>
+
+    <target name="build-init">
+		<mkdir dir="${builddir}"/>
+	</target>
+
+    <target name="dist-init">
+		<mkdir dir="${distdir}"/>
+	</target>
+
+	<target name="build" depends="build-schimp"/>
+
+	<target name="build-antlr" depends="build-init">
+		<parallel threadsperprocessor="1" failonany="true">
+			<antlr4 grammar="uk/ac/bham/cs/schimp/parser/SCHIMP.g4" destdir="${gensrcdir}/antlr4" visitor="true"/>
+			<antlr4 grammar="uk/ac/bham/cs/schimp/parser/SCHIMPFunctionModel.g4" destdir="${gensrcdir}/antlr4" visitor="true"/>
+		</parallel>
+	</target>
+
+	<target name="extract-libs" depends="build-init">
+		<for param="lib" parallel="true">
+			<path>
+				<fileset dir="${libdir}">
+					<include name="*.jar"/>
+					<include name="prism-*/colt.jar"/>
+					<include name="prism-*/jhoafparser.jar"/>
+					<include name="prism-*/prism.jar"/>
+				</fileset>
+			</path>
+			<sequential>
+				<extractjar src="@{lib}" destdir="${builddir}"/>
+			</sequential>
+		</for>
+	</target>
+
+	<target name="build-schimp" depends="build-antlr,extract-libs">
+		<javac destdir="${builddir}" classpath="${builddir}" source="${sourcever}" target="${targetver}" debug="true" debuglevel="${debuglevel}" includeantruntime="false">
+			<src path="${gensrcdir}/antlr4"/>
+			<src path="${srcdir}"/>
+		</javac>
+	</target>
+
+	<target name="dist" depends="dist-jar,dist-install-libs"/>
+
+	<target name="dist-jar" depends="build-schimp">
+		<delete file="${distdir}/schimp.jar"/>
+		<jar destfile="${distdir}/schimp.jar" basedir="${builddir}" index="true" duplicate="fail" whenmanifestonly="fail">
+			<manifest>
+				<attribute name="Main-Class" value="uk.ac.bham.cs.schimp.exec.CommandLine"/>
+			</manifest>
+		</jar>
+	</target>
+
+	<target name="dist-install-libs">
+		<copy todir="${distdir}" flatten="true">
+			<fileset dir="${libdir}" includes="prism-*/*.so"/>
+		</copy>
+	</target>
+
+	<macrodef name="antlr4">
+		<attribute name="srcdir" default="${srcdir}"/>
+		<attribute name="grammar"/>
+		<attribute name="destdir"/>
+		<attribute name="listener" default="false"/>
+		<attribute name="visitor" default="false"/>
+		<sequential>
+			<local name="antlr4.package"/>
+			<local name="antlr4.grammardir"/>
+			<local name="antlr4.listenerarg"/>
+			<local name="antlr4.visitorarg"/>
+			<dirname file="@{srcdir}/@{grammar}" property="antlr4.grammardir"/>
+			<pathconvert property="antlr4.package" dirsep=".">
+				<path location="${antlr4.grammardir}"/>
+				<map from="@{srcdir}/" to=""/>
+			</pathconvert>
+			<if>
+				<istrue value="@{listener}"/>
+				<then>
+					<property name="antlr4.listenerarg" value="-listener"/>
+				</then>
+				<else>
+					<property name="antlr4.listenerarg" value="-no-listener"/>
+				</else>
+			</if>
+			<if>
+				<istrue value="@{visitor}"/>
+				<then>
+					<property name="antlr4.visitorarg" value="-visitor"/>
+				</then>
+				<else>
+					<property name="antlr4.visitorarg" value="-no-visitor"/>
+				</else>
+			</if>
+			<java classname="org.antlr.v4.Tool" fork="true" failonerror="true" dir="@{srcdir}">
+				<arg value="-Werror"/>
+				<arg value="-o"/>
+				<arg value="@{destdir}"/>
+				<arg value="-package"/>
+				<arg value="${antlr4.package}"/>
+				<arg value="${antlr4.listenerarg}"/>
+				<arg value="${antlr4.visitorarg}"/>
+				<arg value="@{grammar}"/>
+				<classpath>
+					<fileset dir="${libdir}">
+						<include name="antlr-*-complete.jar"/>
+					</fileset>
+				</classpath>
+			</java>
+		</sequential>
+	</macrodef>
+
+	<macrodef name="extractjar">
+		<attribute name="src"/>
+		<attribute name="destdir" default="${builddir}"/>
+		<attribute name="omitsources" default="true"/>
+		<sequential>
+			<local name="extractjar.excludes"/>
+			<if>
+				<istrue value="@{omitsources}"/>
+				<then>
+					<property name="extractjar.excludes" value="META-INF/** docs/** src/** build.xml ChangeLog LICENSE Makefile README"/>
+				</then>
+				<else>
+					<property name="extractjar.excludes" value="META-INF/**"/>
+				</else>
+			</if>
+			<unzip src="@{src}" dest="@{destdir}" failOnEmptyArchive="true">
+				<patternset excludes="${extractjar.excludes}"/>
+			</unzip>
+		</sequential>
+	</macrodef>
+</project>
