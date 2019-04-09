@@ -128,7 +128,7 @@ public class CommandLine {
 			prismAttackerGuesses.initialise();
 			prismAttackerGuesses.setEngine(Prism.EXPLICIT);
 			prismAttackerGuesses.getSettings().set(PrismSettings.PRISM_SORT_STATES, false);
-			prismAttackerGuesses.getSettings().set(PrismSettings.PRISM_GRID_RESOLUTION, 8);
+			prismAttackerGuesses.getSettings().set(PrismSettings.PRISM_GRID_RESOLUTION, options.valueOf("grid-resolution"));
 			//prismAttackerGuesses.getSettings().set(PrismSettings.PRISM_EXPORT_ADV, "MDP");
 			//prismAttackerGuesses.getSettings().set(PrismSettings.PRISM_EXPORT_ADV_FILENAME, "examples/adv.tra");
 		} catch (PrismException e) {
@@ -237,6 +237,8 @@ public class CommandLine {
 		parser.acceptsAll(Arrays.asList("o", "show-outputs"));
 		
 		parser.acceptsAll(Arrays.asList("a", "show-all-transitions"));
+		
+		parser.acceptsAll(Arrays.asList("g", "grid-resolution")).withRequiredArg().ofType(Integer.class).defaultsTo(8);
 		
 		// --help (optional): show program help and exit
 		parser.accepts("help");
