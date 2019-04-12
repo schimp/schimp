@@ -52,11 +52,11 @@
 	<target name="extract-libs" depends="build-init">
 		<for param="lib" parallel="true">
 			<path>
-				<fileset dir="${libdir}">
-					<include name="*.jar"/>
-					<include name="prism-*/colt.jar"/>
-					<include name="prism-*/jhoafparser.jar"/>
-					<include name="prism-*/prism.jar"/>
+				<fileset dir="${libdir}" includes="*.jar"/>
+				<fileset dir="${extdir}/prism/prism/lib">
+					<include name="colt.jar"/>
+					<include name="jhoafparser.jar"/>
+					<include name="prism.jar"/>
 				</fileset>
 			</path>
 			<sequential>

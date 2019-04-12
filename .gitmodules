@@ -1,0 +1,4 @@
+[submodule "ext/prism"]
+	path = ext/prism
+	url = git@git.cs.bham.ac.uk:novakovc/prism-ext.git
+	branch = pomdps
