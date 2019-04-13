@@ -2,6 +2,8 @@ package uk.ac.bham.cs.schimp.exec;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Field;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -33,6 +35,26 @@ public class CommandLine {
 	static {
 		// suppress awt guis created by prism
 		System.setProperty("java.awt.headless", "true");
+		
+		// if this class is loaded from a jar file, assume that the directory containing the jar file also contains the
+		// native-code libraries required by prism's java bindings, and add that directory to java.library.path
+		try {
+			URL commandLineURL = CommandLine.class.getResource("/" + CommandLine.class.getName().replace('.', '/') + ".class");
+			if (commandLineURL.getProtocol().equals("jar")) {
+				URL jarURL = new URL(commandLineURL.getFile().replaceAll("!.*?$", ""));
+				if (jarURL.getProtocol().equals("file")) {
+					String jarDirectory = new File(jarURL.getPath()).getParentFile().getAbsolutePath();
+					String libraryPath = System.getProperty("java.library.path");
+					System.setProperty("java.library.path", libraryPath.equals("") ? jarDirectory : jarDirectory + File.pathSeparator + libraryPath);
+					
+					// re-evaluate java.library.path upon the next invocation of System.loadLibrary()
+					// (http://web.archive.org/web/20160214203937/http://blog.cedarsoft.com/2010/11/setting-java-library-path-programmatically/)
+					Field fieldSysPath = ClassLoader.class.getDeclaredField("sys_paths");
+					fieldSysPath.setAccessible(true);
+					fieldSysPath.set(null, null);
+				}
+			}
+		} catch (Exception e) {}
 	}
 	
 	public static void main(String[] args) {
