@@ -19,9 +19,42 @@
 		</classpath>
 	</taskdef>
 
+	<!-- Known values for os.type: http://lopica.sourceforge.net/os.html -->
+	<propertyregex property="ostype" input="${os.name}" regexp="^([^ ]*)" select="\1"/>
+
+	<!-- Recreate per-OS LIBPREFIX and LIBSUFFIX from PRISM's makefile -->
+	<if>
+		<equals arg1="${ostype}" arg2="Windows"/>
+		<then>
+			<property name="prism.libprefix" value=""/>
+			<property name="prism.libsuffix" value=".dll"/>
+		</then>
+		<elseif>
+			<or>
+				<equals arg1="${ostype}" arg2="Linux"/>
+				<equals arg1="${ostype}" arg2="Solaris"/>
+				<equals arg1="${ostype}" arg2="SunOS"/>
+			</or>
+			<then>
+				<property name="prism.libprefix" value="lib"/>
+				<property name="prism.libsuffix" value=".so"/>
+			</then>
+		</elseif>
+		<elseif>
+			<equals arg1="${ostype}" arg2="Mac"/>
+			<then>
+				<property name="prism.libprefix" value="lib"/>
+				<property name="prism.libsuffix" value=".dylib"/>
+			</then>
+		</elseif>
+	</if>
+
 	<target name="clean" depends="build-clean"/>
 
     <target name="build-clean">
+		<exec executable="make" dir="${extdir}/prism/prism" failonerror="true" failifexecutionfails="true">
+			<arg value="clean_all"/>
+		</exec>
 		<delete failonerror="false" includeemptydirs="true">
 			<fileset dir="${builddir}"/>
 			<fileset dir="${gensrcdir}"/>
@@ -49,7 +82,15 @@
 		</parallel>
 	</target>
 
-	<target name="extract-libs" depends="build-init">
+	<target name="build-prism" depends="build-init">
+		<exec executable="make" dir="${extdir}/prism/prism" failonerror="true" failifexecutionfails="true">
+			<arg value="all"/>
+			<arg value="binary"/>
+			<arg value="source-jar"/>
+		</exec>
+	</target>
+
+	<target name="extract-libs" depends="build-prism">
 		<for param="lib" parallel="true">
 			<path>
 				<fileset dir="${libdir}" includes="*.jar"/>
@@ -85,7 +126,7 @@
 
 	<target name="dist-install-libs">
 		<copy todir="${distdir}" flatten="true">
-			<fileset dir="${libdir}" includes="prism-*/*.so"/>
+			<fileset dir="${extdir}/prism/prism/lib" includes="${prism.libprefix}*${prism.libsuffix}"/>
 		</copy>
 	</target>
 
