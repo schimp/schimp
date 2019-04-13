@@ -30,6 +30,11 @@ import uk.ac.bham.cs.schimp.source.SyntaxException;
 
 public class CommandLine {
 	
+	static {
+		// suppress awt guis created by prism
+		System.setProperty("java.awt.headless", "true");
+	}
+	
 	public static void main(String[] args) {
 		// parse and validate the command line options we were given
 		OptionSet options = null;
