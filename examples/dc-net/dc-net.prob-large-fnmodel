@@ -1,6 +1,6 @@
-# Timing side-channel (communicator takes slightly longer to execute)
-# Approximately normal distribution, larger variance
-model announce/3 := {
+# Timing side channel (transmitter takes slightly longer to execute)
+# Approximately binomial distribution, larger variance
+model broadcast/3 := {
 	(_, 0, _) -> {
 		(1, 1) -> 1/10,
 		(2, 1) -> 1/5,

@@ -1,4 +1,0 @@
-# No timing side-channel
-model announce/3 := {
-	(_, _, _) -> (1, 0)
-}
