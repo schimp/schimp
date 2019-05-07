@@ -8,7 +8,7 @@ new h0 := 2;
 new h1 := 3;
 
 new ack_timeout := 10;
-new max_messages := 20;
+new max_messages := 15;
 
 # The elapsed units of time for processing the round trip of a single message
 # (low -> pump -> high -> pump -> low); this is reset to 0 whenever low begins
@@ -21,7 +21,7 @@ new global_clock := 0;
 # can be used to enforce an upper bound on the total amount of time high has to
 # leak h to low. Set to an integer larger than ack_timeout * max_messages to
 # avoid doing this
-new global_timeout := 1000;
+new global_timeout := 30;
 
 # Run the protocol for sending a message from the low-security node to the
 # high-security node via the pump:
