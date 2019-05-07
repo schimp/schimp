@@ -1,0 +1,59 @@
+# Secret key used for encryption:
+initial e := {
+	0 -> 1/8, 1 -> 1/8, 2 -> 1/8, 3 -> 1/8,
+	4 -> 1/8, 5 -> 1/8, 6 -> 1/8, 7 -> 1/8
+};
+new e_bits := 3; # = log2 e
+
+# Message to encrypt (actual value not important):
+new a := 42;
+
+# Publicly-known constant:
+new n := 13;
+
+# Used to return results from sq_mod(), mult_mod() and bit_at():
+new res := 0;
+
+# Computes a^e mod n
+# From Fig. 4b in Chevallier-Mames et al.
+function sq_mult(a, e, n) {
+	new b0 := 1;
+	new b1 := a;
+	new k := 1;
+	
+	new i := 0;
+	while (i < e_bits - 1 or i == e_bits - 1) {
+		# k <- k xor d_i
+		bit_at(e, i); # -> res
+		k := k xor res;
+		
+		# Rk <- Rk . R1
+		if (k == 0) {
+			multiply_mod(b0, b1, n); # -> res
+			b0 := res
+		} else { # if k == 1
+			multiply_mod(b1, b1, n); # -> res
+			b1 := res
+		};
+		
+		# i <- i + k
+		i := i + k
+	};
+	
+	output b0
+};
+
+function sq_mod(x, m) {
+	res := x * x mod n
+};
+
+function mult_mod(x, y, m) {
+	res := x * y mod n
+};
+
+# Returns the n'th bit of x (either 0 or 1) - lowest bit is n=0
+function bit_at(x, n) {
+	res := floor (x / 2 ^ n) mod 2
+};
+
+sq_mult(a, e, n)

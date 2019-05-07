@@ -11,15 +11,15 @@ new a := 42;
 # Publicly-known constant:
 new n := 13;
 
-# Used to return results from square_mod(), multiply_mod() and bit_at():
+# Used to return results from sq_mod(), mult_mod() and bit_at():
 new res := 0;
 
 # Computes a^e mod n
-function square_and_multiply(a, e, n) {
+function sq_mult(a, e, n) {
 	new b := 1;
 	
 	new i := e_bits;
-	while (i > 0) {
+	while (i > 0 or i == 0) {
 		square_mod(b, n); # -> res
 		b := res;
 		bit_at(e, i); # -> res
@@ -34,17 +34,17 @@ function square_and_multiply(a, e, n) {
 	output b
 };
 
-function square_mod(x, m) {
+function sq_mod(x, m) {
 	res := x * x mod n
 };
 
-function multiply_mod(x, y, m) {
+function mult_mod(x, y, m) {
 	res := x * y mod n
 };
 
-# Returns the n'th bit of x (either 0 or 1) - lowest bit is n=1
+# Returns the n'th bit of x (either 0 or 1) - lowest bit is n=0
 function bit_at(x, n) {
-	res := floor (x / 2 ^ (n - 1)) mod 2
+	res := floor (x / 2 ^ n) mod 2
 };
 
-square_and_multiply(a, e, n)
+sq_mult(a, e, n)

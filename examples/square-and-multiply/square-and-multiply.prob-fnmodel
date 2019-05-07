@@ -1,5 +1,5 @@
 # Modular exponentiation can be implemented efficiently:
-model square_mod/2 := {
+model sq_mod/2 := {
 	(_, _) -> {
 		(1, 1) -> 1/10,
 		(1, 2) -> 1/5,
@@ -9,8 +9,8 @@ model square_mod/2 := {
 	}
 };
 
-# Modular multiplication is much more expensive:
-model multiply_mod/3 := {
+# Modular multiplication is more expensive:
+model mult_mod/3 := {
 	(_, _, _) -> {
 		(1, 3) -> 1/10,
 		(1, 4) -> 1/5,
