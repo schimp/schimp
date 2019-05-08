@@ -1,6 +1,7 @@
 <project name="schimp" basedir="." default="build">
 	<property name="builddir" location="build"/>
 	<property name="distdir" location="dist"/>
+	<property name="examplesdir" location="examples"/>
 	<property name="extdir" location="ext"/>
 	<property name="libdir" location="lib"/>
 	<property name="srcdir" location="src"/>
@@ -116,7 +117,7 @@
 	<target name="dist" depends="dist-jar,dist-install-libs"/>
 
 	<target name="dist-jar" depends="build-schimp">
-		<delete file="${distdir}/schimp.jar"/>
+		<delete file="${distdir}/schimp.jar" failonerror="false"/>
 		<jar destfile="${distdir}/schimp.jar" basedir="${builddir}" index="true" duplicate="fail" whenmanifestonly="fail">
 			<manifest>
 				<attribute name="Main-Class" value="uk.ac.bham.cs.schimp.exec.CommandLine"/>
@@ -128,6 +129,23 @@
 		<copy todir="${distdir}" flatten="true">
 			<fileset dir="${extdir}/prism/prism/lib" includes="${prism.libprefix}*${prism.libsuffix}"/>
 		</copy>
+	</target>
+
+	<target name="dist-tarball" depends="dist-jar,dist-install-libs">
+		<delete file="schimp.tar" failonerror="false"/>
+		<delete file="schimp.tar.bz2" failonerror="false"/>
+		<tar destfile="schimp.tar" longfile="posix">
+			<tarfileset dir="${distdir}" prefix="schimp" preserveLeadingSlashes="false">
+				<include name="schimp.jar"/>
+				<include name="${prism.libprefix}*${prism.libsuffix}"/>
+			</tarfileset>
+			<tarfileset dir="${examplesdir}" prefix="schimp/examples" preserveLeadingSlashes="false">
+				<include name="*/*.schimp"/>
+				<include name="*/*.*fnmodel"/>
+			</tarfileset>
+		</tar>
+		<bzip2 src="schimp.tar" destfile="schimp.tar.bz2"/>
+		<delete file="schimp.tar"/>
 	</target>
 
 	<macrodef name="antlr4">
